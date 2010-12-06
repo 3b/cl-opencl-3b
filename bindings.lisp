@@ -82,6 +82,7 @@
   (errcode-ret (:pointer error-code)))
 
 
+;; 1.0 deprecated in 1.1
 (cffi:defcfun ("clSetCommandQueueProperty" set-command-queue-property)
     error-code
   (command-queue command-queue)
@@ -480,3 +481,82 @@
   (errcode-ret (:pointer error-code)))
 
 (cffi:defcfun ("clUnloadCompiler" unload-compiler) error-code)
+
+
+
+;;; 1.1
+(cffi:defcfun ("clCreateUserEvent " create-user-event) event
+  (context context)
+  (errcode-ret (:pointer error-code)))
+
+(cffi:defcfun ("clEnqueueWriteBufferRect" enqueue-write-buffer-rect) int
+  (command-queue command-queue)
+  (buffer mem)
+  (blocking-write-p bool)
+  (buffer-origin (:pointer size-t)) ;;[3]
+  (host-origin (:pointer size-t)) ;;[3]
+  (region (:pointer size-t)) ;;[3]
+  (buffer-row-pitch size-t)
+  (buffer-slice-pitch size-t)
+  (host-row-pitch size-t)
+  (host-slice-pitch size-t)
+  (pointer :pointer)
+  (num-events-in-wait-list uint)
+  (event-wait-list (:pointer event))
+  (event (:pointer event)))
+
+(cffi:defcfun ("clSetEventCallback" set-event-callback) int
+  (event event)
+  (command-exec-callback-type int) ;; CL_COMPLETE = 0x0
+  (callback :pointer)
+  (user-data (:pointer :void)))
+
+(cffi:defcfun ("clEnqueueReadBufferRect" enqueue-read-buffer-rect) int
+  (command-queue command-queue)
+  (buffer mem)
+  (blocking-read-p bool)
+  (buffer-origin (:pointer size-t)) ;;[3]
+  (host-origin (:pointer size-t)) ;;[3]
+  (region (:pointer size-t)) ;;[3]
+  (buffer-row-pitch size-t)
+  (buffer-slice-pitch size-t)
+  (host-row-pitch size-t)
+  (host-slice-pitch size-t)
+  (pointer (:pointer :void))
+  (num-events-in-wait-list uint)
+  (event-wait-list (:pointer event))
+  (event (:pointer event)))
+
+(cffi:defcfun ("clCreateSubBuffer" create-sub-buffer) mem
+  (buffer mem)
+  (flags mem-flags)
+  (buffer-create-type buffer-create-type)
+  (buffer-create-info (:pointer :void))
+  (errcode-ret (:pointer error-code)))
+
+(cffi:defcfun ("clSetMemObjectDestructorCallback"
+               set-mem-object-destructor-callback) int
+  (memobj mem)
+  (callback :pointer)
+  (user-data (:pointer :void)))
+
+(cffi:defcfun ("clEnqueueCopyBufferRect" enqueue-copy-buffer-rect) int
+  (command-queue command-queue)
+  (src-buffer mem)
+  (dst-buffer mem)
+  (src-origin (:pointer size-t)) ;;[3]
+  (dst-origin (:pointer size-t)) ;;[3]
+  (region (:pointer size-t)) ;;[3]
+  (src-row-pitch size-t)
+  (src-slice-pitch size-t)
+  (dst-row-pitch size-t)
+  (dst-slice-pitch size-t)
+  (num-events-in-wait-list uint)
+  (event-wait-list (:pointer event))
+  (event (:pointer event)))
+
+(cffi:defcfun ("clSetUserEventStatus" set-user-event-status) int
+  (event event)
+  (execution-status int))
+
+

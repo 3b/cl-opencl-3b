@@ -173,5 +173,34 @@
            :DEVICE-MEM-CACHE-TYPE
            :UINT
            :UINT32-T
-           #:error-code))
+           #:error-code
+           :buffer-region
+           :size
+           :origin
+
+           :double-3
+           :float-3
+           :ulong-3
+           :short-3
+           :ushort-3
+           :char-3
+           :uchar-3
+           :int-3
+           :uint-3
+
+           :gl-int
+           :gl-uint
+           :gl-enum
+
+           :set-user-event-status
+           :enqueue-copy-buffer-rect
+           :set-mem-object-destructor-callback
+           :create-sub-buffer
+           :buffer-create-type
+           :enqueue-read-buffer-rect
+           :set-event-callback
+           :enqueue-write-buffer-rect
+           :create-user-event
+
+))
 
