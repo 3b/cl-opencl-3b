@@ -1,12 +1,14 @@
 (in-package #:cl-opencl)
 
-(defmacro check-return (form)
+(defmacro check-return (form &body handlers)
   (let ((error-code (gensym)))
-    `(let ((,error-code ,form))
-       (if (eq :success ,error-code)
-           ,error-code
-           (error "OpenCL error ~s from ~s" ,error-code ',(car form))))))
-
+    `(restart-case
+         (let ((,error-code ,form))
+           (case ,error-code
+             (:success ,error-code)
+             ,@handlers
+             (t (error "OpenCL error ~s from ~s" ,error-code ',(car form)))))
+       (continue () :report "Continue" ))))
 
 (defmacro get-counted-list (fun (&rest args) type)
   (let ((fcount (gensym))
