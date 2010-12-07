@@ -236,7 +236,10 @@ manually released)"
   (:host-ptr (:pointer :void))
   (:map-count %cl:uint)
   (:reference-count %cl:uint)
-  (:context %cl:context))
+  (:context %cl:context)
+  ;; 1.1
+  (:associated-memobject %cl:mem)
+  (:offset %cl:size-t))
 
 
 (define-info-getter get-image-info (image param) %cl:get-image-info
@@ -264,7 +267,7 @@ manually released)"
   (:devices %cl:device-id ())
   (:source :string)
   (:binary-sizes %cl:size-t ())
-  (:program-binaries
+  (:binaries
    nil
    ;; fixme: test this...
    (let* ((sizes (get-program-info program :binary-sizes))
@@ -275,7 +278,7 @@ manually released)"
             for i in sizes
             do (setf (mem-aref pointers :pointer i) (inc-pointer buffer j)))
          (check-return
-          (%cl:get-program-info program :program-binaries
+          (%cl:get-program-info program :binaries
                                 (* (foreign-type-size :pointer) (length sizes))
                                 buffer
                                 (cffi:null-pointer)))
