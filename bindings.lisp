@@ -319,8 +319,8 @@
   (event event))
 
 (cffi:defcfun ("clEnqueueNDRangeKernel" enqueue-nd-range-kernel) error-code
-  (command-queue-info command-queue)
-  (kernel-work-group-info kernel)
+  (command-queue command-queue)
+  (kernel kernel)
   (work-dim uint)
   (global-work-offset (:pointer size-t))
   (global-work-size (:pointer size-t))
