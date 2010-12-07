@@ -94,7 +94,7 @@
   ;; cl_khr_gl_sharing
   (:invalid-sharegroup-reference-khr -1000)
   ;; cl_khr_icd
-  (:platform-not-fount-khr -1001))
+  (:platform-not-found-khr -1001))
 
 (defcenum (platform-info uint)
   (:PLATFORM-PROFILE #x0900)
