@@ -27,6 +27,10 @@
 
 (cffi::defctype uint uint32-t)
 
+(cffi::defctype uint64-t :unsigned-long)
+
+(cffi::defctype ulong uint64-t)
+
 (cffi::defctype bitfield ulong)
 
 (cffi::defctype int32-t :int)
@@ -374,10 +378,6 @@
 
 
 
-(cffi::defctype uint64-t :unsigned-long)
-
-(cffi::defctype ulong uint64-t)
-
 (cffi:defcstruct _image-format
   (image-channel-order channel-order)
   (image-channel-data-type channel-type))
@@ -556,10 +556,6 @@
 ;;  (origin size-t)
 ;;  (size size-t))
 ;;(cffi::defctype buffer-region _buffer-region)
-
-(cffi::defbitfield (command-queue-properties bitfield)
-  (:queue-out-of-order-exec-mode-enable #. (cl:ash 1 0))
-  (:queue-profiling-enable #. (cl:ash 1 1)))
 
 (defcenum (buffer-create-type uint)
   (:region #x1220))

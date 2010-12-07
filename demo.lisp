@@ -78,7 +78,7 @@
            do (format t "   param ~a = ~s~%" info  s)
            ))))
 
-
+#++
 (let* ((p (car (get-platform-ids)))
        (d (car (get-device-ids p :all))))
   (assert d)
@@ -94,11 +94,11 @@
               (set-command-queue-property command-queue :out-of-order-exec-mode-enable t :return-old-properties t))
       (loop for info in '(:context :device :reference-count :properties )
          do (format t "  param ~s = ~s~%" info (get-command-queue-info command-queue info)))
-      
+
       (format t "clear out-of-order prop : old values=~s~%"
               (set-command-queue-property command-queue :out-of-order-exec-mode-enable nil :return-old-properties t))
       (loop for info in '(:context :device :reference-count :properties )
          do (format t "  param ~s = ~s~%" info (get-command-queue-info command-queue info))))))
 
-
+#++
 (cffi::canonicalize-foreign-type '%cl:context-properties)
