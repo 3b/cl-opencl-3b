@@ -4,6 +4,8 @@
   :serial t
   :components
   ((:file "bindings-package")
+   (:file "library")
+   (:file "util")
    (:file "types")
    (:file "bindings")
    ;; Lispifications.

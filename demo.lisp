@@ -16,6 +16,7 @@
         do (format t "param ~a = ~s~%" info  s #++(mem-aref s :string))
         )
      (format t "~%")
+       #++(format t "num platforms (khr) = ~s~%" (%cl::icd-get-platform-ids-khr 0 (cffi:null-pointer) (cffi:null-pointer)))
      (format t "cpu devices = ~s~%" (ignore-errors (get-device-ids p :cpu)))
      (format t "gpu devices = ~s~%" (ignore-errors (get-device-ids p :gpu)))
      (format t "cpu|gpu devices = ~s~%" (ignore-errors (get-device-ids p :cpu :gpu)))

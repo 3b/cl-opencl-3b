@@ -1,0 +1,42 @@
+(cl:in-package #:cl-opencl-bindings)
+
+(cffi:defcfun ("clGetExtensionFunctionAddress" get-extension-function-address)
+    (:pointer :void)
+  (function-name :string))
+
+(cl:eval-when (:load-toplevel :execute)
+  #+clisp (cl:pushnew 'reset-cl-pointers custom:*fini-hooks*)
+  #+sbcl (cl:pushnew 'reset-cl-pointers sb-ext:*save-hooks*)
+  #+cmu (cl:pushnew 'reset-cl-pointers ext:*before-save-initializations*)
+  #-(or clisp sbcl cmu)
+  (cl:warn "Don't know how to setup a hook before saving cores on this Lisp."))
+
+(cl:defparameter *cl-extension-resetter-list* cl:nil)
+;;; FIXME? There's a possible race condition here, but this function
+;;; is intended to be called while saving an image, so if someone is
+;;; still calling CL functions we lose anyway...
+(cl:defun reset-cl-pointers ()
+  (cl:format cl:t "~&;; resetting OpenCL extension pointers...~%")
+  (cl:mapc #'cl:funcall *cl-extension-resetter-list*)
+  (cl:setf *cl-extension-resetter-list* cl:nil))
+
+
+(cl:defmacro defclextfun ((cname lname) return-type cl:&body args)
+  (alexandria:with-unique-names (pointer)
+    `(cl:let ((,pointer (null-pointer)))
+       (cl:defun ,lname ,(cl:mapcar #'cl:car args)
+         (cl:when (null-pointer-p ,pointer)
+           (cl:setf ,pointer (get-extension-function-address ,cname))
+           (cl:assert (cl:not (null-pointer-p ,pointer)) ()
+                   "Couldn't load symbol ~A~%" ,cname)
+           (cl:format cl:t "Loaded function pointer for ~A: ~A~%" ,cname ,pointer)
+           (cl:push (cl:lambda () (cl:setf ,pointer (null-pointer)))
+                 *cl-extension-resetter-list*))
+         (foreign-funcall-pointer
+          ,pointer
+          (:library opencl)
+          ,@(cl:loop for arg in args
+                     collect (cl:second arg)
+                     collect (cl:first arg))
+          ,return-type)))))
+

@@ -23,13 +23,6 @@
 
 (cl:in-package #:cl-opencl-bindings)
 
-(define-foreign-library opencl
-  (:darwin (:framework "OpenCL")) ;; ?
-  ;; ?(:windows ".dll" :calling-convention :stdcall)
-  (:unix (:or "libOpenCL.so" "libOpenCL.so.1" "libOpenCL.so.1.0" )))
-
-(use-foreign-library opencl)
-
 (cffi:defcfun ("clCreateKernelsInProgram" create-kernels-in-program) error-code
   (program program)
   (num_kernels uint)
@@ -392,10 +385,6 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clGetExtensionFunctionAddress" get-extension-function-address)
-    (:pointer :void)
-  (function-name :string))
-
 (cffi:defcfun ("clRetainCommandQueue" retain-command-queue) error-code
   (command-queue command-queue))
 
@@ -559,4 +548,18 @@
   (event event)
   (execution-status int))
 
+;; cl_khr_icd
+;; not sure if this is actually exposed to clients or not?
+(defclextfun ("clIcdGetPlatformIDsKHR" icd-get-platform-ids-khr) int
+  (num-entries uint)
+  (platforms (:pointer platform-id))
+  (num-platforms (:pointer uint)))
 
+;; cl_khr_gl_sharing
+
+(defclextfun ("clGetGLContextInfoKHR" get-gl-context-info-khr) error-code
+  (properties (:pointer context-properties))
+  (param-name gl-context-info)
+  (param-value-size size-t)
+  (param-value (:pointer :void))
+  (param-value-size-ret (:pointer size-t)))

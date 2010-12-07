@@ -89,14 +89,21 @@
   (:INVALID-BUFFER-SIZE -61)
   (:INVALID-MIP-LEVEL -62)
   (:INVALID-GLOBAL-WORK-SIZE -63)
-  (:invalid-property -64)) ;; 1.1
+  ;; 1.1
+  (:invalid-property -64)
+  ;; cl_khr_gl_sharing
+  (:invalid-sharegroup-reference-khr -1000)
+  ;; cl_khr_icd
+  (:platform-not-fount-khr -1001))
 
 (defcenum (platform-info uint)
   (:PLATFORM-PROFILE #x0900)
   (:PLATFORM-VERSION #x0901)
   (:PLATFORM-NAME #x0902)
   (:PLATFORM-VENDOR #x0903)
-  (:PLATFORM-EXTENSIONS #x0904))
+  (:PLATFORM-EXTENSIONS #x0904)
+  ;; cl_khr_icd
+  (:platform-icd-suffix-khr #x0920))
 
 (defbitfield (device-type bitfield)
   (:DEFAULT                      1)
@@ -204,7 +211,13 @@
 
 ;(cffi::defctype cl-context-properties intptr-t) ?
 (defcenum (context-properties intptr-t)
-  (:PLATFORM                         #x1084))
+  (:PLATFORM                         #x1084)
+  ;; cl_khr_gl_sharing
+  (:gl-context-khr                   #x2008)
+  (:egl-display-khr                  #x2009)
+  (:glx-display-khr                  #x200a)
+  (:wgl-hdc-khr                      #x200b)
+  (:cgl-sharegroup-khr               #x200c))
 
 (defcenum (command-queue-info uint)
   (:CONTEXT                            #x1090)
@@ -559,3 +572,11 @@
 
 (defcenum (buffer-create-type uint)
   (:region #x1220))
+
+
+;; cl_khr_gl_sharing
+
+(defcenum (gl-context-info uint)
+  (:current-device-for-gl-context-khr #x2006)
+  (:devices-for-gl-context-khr        #x2007))
+
