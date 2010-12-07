@@ -36,12 +36,20 @@ manually released)"
            for p = (mem-aref platforms '%cl:platform-id i)
            collect p)))))
 
+(defmacro without-fp-traps (&body body)
+  #+(and sbcl (or x86 x86-64))
+  `(sb-int:with-float-traps-masked (:invalid :divide-by-zero)
+     ,@body)
+  #-(and sbcl (or x86 x86-64))
+  `(progn ,@body))
+
 (defun get-platform-ids ()
   "returns a list of available OpenCL Platform IDs (opaque, don't need to be
 manually released)"
   ;; fixme: figure out if returning same pointer twice is correct,
   ;; possibly remove-duplicates on it if so?
-  (get-counted-list %cl:get-platform-ids () '%cl:platform-id))
+  (without-fp-traps
+    (get-counted-list %cl:get-platform-ids () '%cl:platform-id)))
 
 ;; fixme: rewrite using define-info-getter
 (defun get-platform-info (platform-id param)
