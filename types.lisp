@@ -559,11 +559,7 @@
 ;;(cffi::defctype char-16 int8-t :count 16)
 
 
-
-;;(cffi::defctype gl-int :int)
 ;;(cffi::defctype uint-16-t :unsigned-short)
-;;(cffi::defctype gl-enum :unsigned-int)
-;;(cffi::defctype gl-uint :unsigned-int)
 
 ;;(cffi:defcstruct _buffer-region
 ;;  (origin size-t)
@@ -580,3 +576,21 @@
   (:current-device-for-gl-context-khr #x2006)
   (:devices-for-gl-context-khr        #x2007))
 
+;; cl_gl.h
+
+;; fixme: import these from cl-opengl?
+;; (would probably want to split out the GL stuff to a separate .asd if it
+;;  depended on cl-opengl though, so just leaving here for now)
+(defctype gl-enum :unsigned-int)
+(defctype gl-uint :unsigned-int)
+(defctype gl-int :int)
+
+(defcenum (gl-object-type uint)
+  (:object-buffer       #x2000)
+  (:object-texture-2d   #x2001)
+  (:object-texture-3d   #x2002)
+  (:object-renderbuffer #x2003))
+
+(defcenum (gl-texture-info uint)
+  (:texture-target #x2004)
+  (:mipmap-level   #x2005))

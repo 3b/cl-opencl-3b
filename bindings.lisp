@@ -563,3 +563,67 @@
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
+
+;; cl_gl.h
+
+(defcfun ("clCreateFromGLBuffer" create-from-gl-buffer) mem
+  (context context)
+  (flags mem-flags)
+  (bufobj gl-uint)
+  (errcode-ret (:pointer error-code)))
+
+(defcfun ("clCreateFromGLTexture2D" create-from-gl-texture-2d) mem
+  (context context)
+  (flags mem-flags)
+  (target gl-enum)
+  (miplevel gl-int)
+  (texture gl-uint)
+  (errcode-ret (:pointer error-code)))
+
+;; 1.0
+(defcfun ("clCreateFromGLTexture3D" create-from-gl-texture-3d) mem
+  (context context)
+  (flags mem-flags)
+  (target gl-enum)
+  (miplevel gl-int)
+  (texture gl-uint)
+  (errcode-ret (:pointer error-code)))
+
+;;  1.0
+(defcfun ("clCreateFromGLRenderbuffer" create-from-gl-renderbuffer) mem
+  (context context)
+  (flags mem-flags)
+  (renderbuffer gl-uint)
+  (errcode-ret (:pointer error-code)))
+
+;; 1.0
+(defcfun ("clGetGLObjectInfo" get-gl-object-info) error-code
+  (memobj mem)
+  (gl-object-type (:pointer gl-object-type))
+  (gl-object-name (:pointer gl-uint)))
+
+;; 1.0
+(defcfun ("clGetGLTextureInfo" get-gl-texture-info) error-code
+  (memobj mem)
+  (param-name gl-texture-info)
+  (param-value-size size-t)
+  (param-value (:pointer :void))
+  (param-value-size-ret (:pointer size-t)))
+
+;; 1.0
+(defcfun ("clEnqueueAcquireGLObjects" enqueue-acquire-gl-objects) error-code
+  (command-queue command-queue)
+  (num-objects uint)
+  (mem-objects (:pointer mem))
+  (num-events-in-wait-list uint)
+  (event-wait-list (:pointer event))
+  (event (:pointer event)))
+
+;; 1.0
+(defcfun ("clEnqueueReleaseGLObjects" enqueue-release-gl-objects) error-code
+  (command-queue command-queue)
+  (num-objects uint)
+  (mem-objects (:pointer mem))
+  (num-events-in-wait-list uint)
+  (event-wait-list (:pointer event))
+  (event (:pointer event)))
