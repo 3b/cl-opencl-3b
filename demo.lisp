@@ -7,7 +7,7 @@
      do
      (format t "=====================~%")
      (format t "platform ~s= ~s~%" i p)
-     (loop for info in '(:platform-profile :platform-version :platform-name :platform-vendor :platform-extensions)
+     (loop for info in '(:profile :version :name :vendor :extensions)
         for s = (get-platform-info p info)
         do (format t "param ~a = ~s~%" info  s #++(mem-aref s :string))
         )

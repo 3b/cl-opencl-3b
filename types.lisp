@@ -97,13 +97,13 @@
   (:platform-not-found-khr -1001))
 
 (defcenum (platform-info uint)
-  (:PLATFORM-PROFILE #x0900)
-  (:PLATFORM-VERSION #x0901)
-  (:PLATFORM-NAME #x0902)
-  (:PLATFORM-VENDOR #x0903)
-  (:PLATFORM-EXTENSIONS #x0904)
+  (:profile        #x0900)
+  (:version        #x0901)
+  (:name           #x0902)
+  (:vendor         #x0903)
+  (:extensions     #x0904)
   ;; cl_khr_icd
-  (:platform-icd-suffix-khr #x0920))
+  (:icd-suffix-khr #x0920))
 
 (defbitfield (device-type bitfield)
   (:DEFAULT                      1)

@@ -58,7 +58,7 @@ manually released)"
   ;; space used and parsing depend on the param, so we error if we get
   ;; one we don't know about...
   ;; todo: more specific error?
-  ;(assert (member param '(:profile :version :name :vendor :extensions)))
+  (assert (member param '(:profile :version :name :vendor :extensions)))
   (with-foreign-object (fsize '%cl:uint)
     (check-return (%cl:get-platform-info platform-id param
                                          0 (cffi::null-pointer) fsize))
