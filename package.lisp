@@ -32,4 +32,5 @@
    #:enqueue-nd-range-kernel
    #:flush
    #:finish
-   #:enqueue-read-buffer))
+   #:enqueue-read-buffer
+   #:extension-present-p))
