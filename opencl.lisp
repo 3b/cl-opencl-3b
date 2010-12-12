@@ -14,32 +14,20 @@
              ,ret
              (error "OpenCL error ~s from ~s" ,error-code ',form))))))
 
-;; todo: error callback, better handling of properties stuff
-;; properties arg is ugly since it mixes pointers with enums
-;; only one option though, so handling it explicitly for now
-(defun create-context (devices &key platform)
-  (let ((properties nil))
-    (when platform
-      (push (pointer-address platform) properties)
-      (push :platform properties))
-    (with-foreign-objects ((props '%cl:intptr-t (* 2 (1+ (length properties))))
-                           (devs '%cl:device-id (length devices)))
-      (loop for i from 0
-         for dev in devices
-         do (setf (mem-aref devs '%cl:device-id i) dev))
-     (loop
-        for i from 0 by 2 ;; step before list so FINALLY sees correct values
-        for (p v) on properties by #'cddr
-        do
-        (setf (mem-aref props '%cl:context-properties i) p)
-        (setf (mem-aref props '%cl:intptr-t (1+ i)) v)
-        finally (progn
-                  (setf (mem-aref props '%cl:intptr-t i) 0)
-                  (setf (mem-aref props '%cl:intptr-t (1+ i)) 0)))
-     (check-errcode-arg
-      (%cl:create-context props (length devices) devs
-                             ;; todo: error callback
-                             (cffi:null-pointer) (cffi:null-pointer))))))
+(defmacro with-counted-foreign-array ((count-var pointer-var type sequence)
+                                      &body body)
+  (let ((i (gensym))
+        (v (gensym)))
+    (alexandria:once-only (sequence type)
+      `(let ((,count-var (length ,sequence))
+             (,i 0))
+         (with-foreign-object (,pointer-var ,type ,count-var)
+           (map nil (lambda (,v)
+                      (setf (mem-aref ,pointer-var ,type ,i) ,v)
+                      (incf ,i))
+                ,sequence)
+           ,@body)))))
+
 
 (defmacro with-opencl-plist ((var type properties) &body body)
   (let ((base-type (cffi::canonicalize-foreign-type type)))
@@ -49,11 +37,42 @@
           for (p v) on ,properties by #'cddr
           do
             (setf (mem-aref ,var ',type i) p)
-            (setf (mem-aref ,var ',base-type (1+ i)) v)
+            (setf (mem-aref ,var ',base-type (1+ i))
+                  (if (pointerp v)
+                      (pointer-address v)
+                      v))
           finally (progn
                     (setf (mem-aref ,var ',base-type i) 0)
                     (setf (mem-aref ,var ',base-type (1+ i)) 0)))
        ,@body)))
+
+;; todo: error callback, better handling of properties stuff
+;; properties arg is ugly since it mixes pointers with enums
+;; only one option though, so handling it explicitly for now
+(defun create-context (devices &rest properties
+                       &key platform
+                       ;; should this &allow-other-keys, or drop keys
+                       ;; completely rather than enumerating?
+                       gl-context-khr glx-display-khr wgl-hdc-khr
+                       cgl-sharegroup-khr egl-display-khr
+                       context-property-use-cgl-sharegroup-apple)
+  (declare (ignore platform gl-context-khr glx-display-khr
+                   wgl-hdc-khr cgl-sharegroup-khr egl-display-khr
+                   context-property-use-cgl-sharegroup-apple))
+  (let ((devices (alexandria:ensure-list devices)))
+    ;;let ((properties nil))
+    ;; (when platform
+    ;;   (push (pointer-address platform) properties)
+    ;;   (push :platform properties))
+    (with-opencl-plist (props %cl:context-properties properties)
+      (with-foreign-objects ((devs '%cl:device-id (length devices)))
+       (loop for i from 0
+          for dev in devices
+          do (setf (mem-aref devs '%cl:device-id i) dev))
+       (check-errcode-arg
+        (%cl:create-context props (length devices) devs
+                            ;; todo: error callback
+                            (cffi:null-pointer) (cffi:null-pointer)))))))
 
 (defun create-context-from-type (type &key platform)
   (let ((properties nil))
@@ -173,6 +192,43 @@
                                              0 (null-pointer) (null-pointer))))
     array))
 
+;;; 5.2.3 Mapping Buffer Objects
+(defun enqueue-map-buffer (command-queue buffer count
+                           &key (blockp t) wait-list event
+                           (offset 0) (element-type 'single-float)
+                           read write)
+  (let* ((foreign-type (gethash element-type *lisp-type-map*))
+         (octet-count (* count (foreign-type-size foreign-type)))
+         rw-flags)
+    (when read (push :read rw-flags))
+    (when write (push :write rw-flags))
+    (when (or event wait-list)
+      (error "events and wait lists not done yet in enqueue-map-buffer"))
+    (unless blockp
+      (error "non-blocking enqueue-map-buffer doesn't work yet"))
+    (check-errcode-arg
+     (%cl:enqueue-map-buffer command-queue buffer blockp rw-flags
+                             offset octet-count
+                             0 (null-pointer) (null-pointer)))))
+
+(defmacro with-mapped-buffer ((p command-queue buffer count
+                                 &key
+                                 (element-type ''single-float)
+                                 (offset 0) read write) &body body)
+  "Maps the COUNT elements in BUFFER of type ELEMENT-TYPE starting at
+ OFFSET, storing the returned pointer in P. The buffer is unmapped
+ when execution leaves WITH-MAPPED-BUFFER. READ and/or WRITE should be
+ set to specify what access to the mapped data is desired."
+  (alexandria:once-only (command-queue buffer)
+    `(let ((,p (enqueue-map-buffer ,command-queue ,buffer ,count
+                                   :blockp t :offset ,offset
+                                   :element-type ,element-type
+                                   :read ,read :write ,write)))
+       (unwind-protect
+            (progn ,@body)
+         (enqueue-unmap-mem-object ,command-queue ,buffer ,p)))))
+
+
 ;;; 5.3.3
 #++
 (defmacro with-size-t-3 ((var source &optional (default 0)) &body body)
@@ -210,6 +266,8 @@
       ))
 )
 
+
+
 ;;; 5.4.1 retaining and Releasing Memory Objects
 
 (defun retain-mem-object (object)
@@ -220,6 +278,15 @@
   (check-return (%cl:release-mem-object object)))
 
 ;; set-mem-object-destructor-callback
+
+;;; 5.4.2 Unmapping mapped memory objects
+(defun enqueue-unmap-mem-object (command-queue buffer pointer
+                                 &key wait-list event)
+  (when (or event wait-list)
+    (error "events and wait lists not done yet in enqueue-unmap-mem-object"))
+  (check-return
+   (%cl:enqueue-unmap-mem-object command-queue buffer pointer
+                                 0 (null-pointer) (null-pointer))))
 
 ;;; 5.4.4 Memory Object Queries - see get.lisp
 
@@ -353,7 +420,10 @@
 ;; for now requiring global-size, and getting dimensions from legth of that
 (defun enqueue-nd-range-kernel (command-queue kernel global-size
                                 &key global-offset local-size)
-  (let ((dims (min (length global-size) 3)))
+  (let* ((global-size (alexandria:ensure-list global-size))
+         (global-offset (alexandria:ensure-list global-offset))
+         (local-size (alexandria:ensure-list local-size))
+         (dims (min (length global-size) 3)))
     (with-foreign-arrays ((global-size '%cl:size-t global-size :max 3)
                           (global-offset '%cl:size-t global-offset :max 3 :empty-as-null-p t)
                           (local-size '%cl:size-t local-size :max 3 :empty-as-null-p t))
@@ -376,3 +446,28 @@
 
 (defun finish (command-queue)
   (check-return (%cl:finish command-queue)))
+
+;;; 9.8.2 CL Buffer Objects -> GL Buffer Objects
+
+(defun create-from-gl-buffer (context usage gl-buffer)
+  (check-errcode-arg (%cl:create-from-gl-buffer context usage gl-buffer)))
+
+;;; 9.8.6 Sharing memory objects that map to GL objects between CL and GL contexts
+
+(defun enqueue-acquire-gl-objects (command-queue objects
+                                   &key wait-list event)
+  (when (or event wait-list)
+    (error "events and wait lists not done yet in enqueue-acquire-gl-objects"))
+  (with-counted-foreign-array (c p '%cl:mem objects)
+    (check-return
+        (%cl:enqueue-acquire-gl-objects command-queue c p
+                                        0 (null-pointer) (null-pointer)))))
+
+(defun enqueue-release-gl-objects (command-queue objects
+                                   &key wait-list event)
+  (when (or event wait-list)
+    (error "events and wait lists not done yet in enqueue-release-gl-objects"))
+  (with-counted-foreign-array (c p '%cl:mem objects)
+    (check-return
+        (%cl:enqueue-release-gl-objects command-queue c p
+                                        0 (null-pointer) (null-pointer)))))

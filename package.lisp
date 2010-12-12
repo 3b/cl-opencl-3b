@@ -33,4 +33,15 @@
    #:flush
    #:finish
    #:enqueue-read-buffer
-   #:extension-present-p))
+   #:extension-present-p
+   #:release-context
+   #:release-command-queue
+   #:retain-command-queue
+   #:retain-context
+   #:create-context
+   #:enqueue-map-buffer
+   #:with-mapped-buffer
+   #:enqueue-unmap-mem-object
+   #:create-from-gl-buffer
+   #:enqueue-acquire-gl-objects
+   #:enqueue-release-gl-objects))

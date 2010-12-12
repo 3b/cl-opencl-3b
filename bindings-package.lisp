@@ -202,5 +202,13 @@
            :enqueue-write-buffer-rect
            :create-user-event
 
-))
+#:create-from-gl-buffer
+#:create-from-gl-texture-2d
+#:create-from-gl-texture-3d
+#:get-gl-context-info-khr
+#:create-from-gl-renderbuffer
+#:get-gl-object-info
+#:get-gl-texture-info
+#:enqueue-acquire-gl-objects
+#:enqueue-release-gl-objects))
 
