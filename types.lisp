@@ -23,21 +23,21 @@
 
 (cl:in-package #:cl-opencl-bindings)
 
-(cffi::defctype uint32-t :unsigned-int)
+(cffi::defctype uint32-t :uint32)
 
 (cffi::defctype uint uint32-t)
 
-(cffi::defctype uint64-t :unsigned-long)
+(cffi::defctype uint64-t :uint64)
 
 (cffi::defctype ulong uint64-t)
 
 (cffi::defctype bitfield ulong)
 
-(cffi::defctype int32-t :int)
+(cffi::defctype int32-t :int32)
 
 (cffi::defctype int int32-t)
 
-(cffi::defctype intptr-t :long)
+(cffi::defctype intptr-t :intptr)
 
 (defcenum error-code
   (:SUCCESS 0)
