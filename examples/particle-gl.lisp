@@ -235,7 +235,7 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
 
 (defmethod glut:display-window :before ((w opencl-particles-window))
   (cond
-    ((extension-present-p *platform* "cl_khr_gl_sharing")
+    ((device-extension-present-p (device w) "cl_khr_gl_sharing")
        (setf *context*
              (create-context (list (device w))
                              :platform *platform*
@@ -249,9 +249,9 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
                              #+ darwin :cgl-sharegroup-khr
                              #+ darwin (cgl-get-share-group
                                         (cgl-get-current-context)))))
-    ((extension-present-p *platform*  "cl_APPLE_gl_sharing")
+    ((device-extension-present-p (device w) "cl_APPLE_gl_sharing")
      (error "context sharing not implemented yet for cl_APPLE_gl_sharing"))
-    (t (error "no context sharing extension found?")))
+     (t (error "no context sharing extension found in device?")))
   (push (create-command-queue *context* (device w)) *command-queues*)
   (reload-programs w)
   (gl:enable :depth-test :multisample))
@@ -337,8 +337,8 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
   (let* ((*platform* (ensure-platform))
          (device (car (get-device-ids *platform* :all)))
          (sharing-supported
-          (or (extension-present-p *platform* "cl_APPLE_gl_sharing")
-              (extension-present-p *platform* "cl_khr_gl_sharing"))))
+          (or (device-extension-present-p device "cl_APPLE_gl_sharing")
+              (device-extension-present-p device "cl_khr_gl_sharing"))))
     (format t "using ~s / ~s, version ~s~% GL context sharing extension available: ~s~%"
             (get-platform-info *platform* :vendor)
             (get-platform-info *platform* :name)
