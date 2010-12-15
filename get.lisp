@@ -87,6 +87,24 @@ currently implemented for speed, so avoid in inner loops"
                (and (< end (length extension-string))
                     (char= #\space (char extension-string end))))))))
 
+(defun device-extension-present-p (device-id name)
+  "Check for presence of extension NAME in cl extension list, not
+currently implemented for speed, so avoid in inner loops"
+  ;; we can't just search here, since we don't want to match substrings.
+  ;; it would possibly be cleaner to split up the extension list and
+  ;; cache it if there is a good way to tell when to invalidate the
+  ;; cache
+  (unless (find #\space name)
+    (let* ((extension-string (get-device-info device-id :extensions))
+           (start (search name extension-string))
+           (end (when start (+ start (length name)))))
+      (and start
+           (or (zerop start)
+               (char= #\space (char extension-string (1- start))))
+           (or (= end (length extension-string))
+               (and (< end (length extension-string))
+                    (char= #\space (char extension-string end))))))))
+
 (defun get-device-ids (platform-id &rest device-types)
   "get a list of device IDs on specified platform matching any of DEVICE-TYPES
 \(:cpu, :gpu, :accelerator, :default, :all)"

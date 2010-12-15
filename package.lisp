@@ -44,4 +44,5 @@
    #:enqueue-unmap-mem-object
    #:create-from-gl-buffer
    #:enqueue-acquire-gl-objects
-   #:enqueue-release-gl-objects))
+   #:enqueue-release-gl-objects
+   #:device-extension-present-p))
