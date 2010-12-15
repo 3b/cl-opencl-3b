@@ -1,5 +1,14 @@
 (in-package #:cl-opencl)
 
+(defun foo (fun &rest args)
+  ;; return something informative rather than completely ignoring errors
+  (let* ((v (multiple-value-list (ignore-errors (apply fun args))))
+         (r (first v))
+         (e (second v)))
+    (if (and (not r) e (typep e 'simple-condition))
+        (apply 'format nil (simple-condition-format-control e)
+               (simple-condition-format-arguments e))
+        (values-list v))))
 
 (defun print-info ()
   (loop for i from 0
@@ -17,12 +26,14 @@
         )
      (format t "~%")
        #++(format t "num platforms (khr) = ~s~%" (%cl::icd-get-platform-ids-khr 0 (cffi:null-pointer) (cffi:null-pointer)))
-     (format t "cpu devices = ~s~%" (ignore-errors (get-device-ids p :cpu)))
-     (format t "gpu devices = ~s~%" (ignore-errors (get-device-ids p :gpu)))
-     (format t "cpu|gpu devices = ~s~%" (ignore-errors (get-device-ids p :cpu :gpu)))
-     (format t "accel devices = ~s~%" (ignore-errors (get-device-ids p :accelerator)))
-     (format t "default devices = ~s~%" (ignore-errors (get-device-ids p :default)))
-     (format t "all devices = ~s~%" (ignore-errors (get-device-ids p :all)))
+       (let ((*print-escape* nil)
+             (*print-readably* nil))
+         (format t "cpu devices = ~s~%" (foo 'get-device-ids p :cpu))
+         (format t "gpu devices = ~s~%" (foo 'get-device-ids p :gpu))
+         (format t "cpu|gpu devices = ~s~%" (foo 'get-device-ids p :cpu :gpu))
+         (format t "accel devices = ~s~%" (foo 'get-device-ids p :accelerator))
+         (format t "default devices = ~s~%" (foo 'get-device-ids p :default))
+         (format t "all devices = ~s~%" (foo 'get-device-ids p :all)))
      (loop for dev in (ignore-errors (get-device-ids p :all))
         do (format t " ----~% device ~s :~%" dev)
         (loop for info in '(:type
@@ -75,7 +86,7 @@
                             :version
                             :extensions
                             :platform)
-           for s = (get-device-info dev info)
+           for s = (foo 'get-device-info dev info)
            do (format t "   param ~a = ~s~%" info  s)
            ))))
 
