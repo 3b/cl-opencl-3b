@@ -37,7 +37,8 @@
 
 (cffi::defctype int int32-t)
 
-(cffi::defctype intptr-t :intptr)
+
+;;(cffi::defctype intptr-t :intptr)
 
 (defcenum error-code
   (:SUCCESS 0)
@@ -210,7 +211,8 @@
   (:context-num-devices              #x1083)) ;; 1.1
 
 ;(cffi::defctype cl-context-properties intptr-t) ?
-(defcenum (context-properties intptr-t)
+;; intptr-t in C headers, but easier to use as unsigned, so :uintptr here
+(defcenum (context-properties :uintptr)
   (:PLATFORM                         #x1084)
   ;; cl_khr_gl_sharing
   (:gl-context-khr                   #x2008)
