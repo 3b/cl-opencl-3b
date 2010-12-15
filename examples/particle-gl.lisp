@@ -308,7 +308,7 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
                                   *particles-per-click*)
             (systems window))
       (format t "added particle system, ~s total~%" (length (systems window)))
-      (format t " = ~s particles~%" (reduce #'+ (systems window) :key 'particle-count)))))
+      (format t " = ~:d particles~%" (reduce #'+ (systems window) :key 'particle-count)))))
 
 (defmethod glut:close ((window opencl-particles-window))
   (format t "window closed, cleaning up...~%")
