@@ -474,7 +474,7 @@
 
 
 ;;; 1.1
-(cffi:defcfun ("clCreateUserEvent " create-user-event) event
+(cffi:defcfun ("clCreateUserEvent" create-user-event) event
   (context context)
   (errcode-ret (:pointer error-code)))
 
