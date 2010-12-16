@@ -7,6 +7,7 @@
     "examples"
     :serial t
     :components
-    ((:file "util")
+    ((:file "opengl-examples-package")
+     (:file "util")
      (:file "particle-gl")
      ))))

@@ -1,6 +1,6 @@
 ;;; particle system using OpenCL and OpenGL
 
-;;; run opencl-opengl-particles:particles, click to add particle
+;;; run opencl-opengl-examples:particles, click to add particle
 ;;; systems, space to clear running systems, esc to quit
 ;;; might need to adjust *particles-per-click*, or point size in
 ;;;   glut:display method depending on hardware performance
@@ -15,12 +15,7 @@
 ;;;   more interesting particles, benchmark mode, etc
 ;;;   reduce memory leaks / clean up resource management stuff
 
-
-(defpackage #:opencl-opengl-particles
-  (:use :cl :ocl)
-  (:export #:particles))
-
-(in-package #:opencl-opengl-particles)
+(in-package #:opencl-opengl-examples)
 
 (defparameter *program-source* "
 __kernel void particles(__global float4* pos, __global float4* v, float dt, float x, float y,float z)
