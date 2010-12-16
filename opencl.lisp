@@ -333,7 +333,9 @@
                                       (if devices device-list (null-pointer))
                                       options-string
                                       (null-pointer) (null-pointer))
-       (:build-program-failure
+       ;; nv drivers return :invalid-binary for undefined functions,
+       ;; so treat that like build failure for now...
+       ((:build-program-failure :invalid-binary)
         (let ((status (loop for i in (get-program-info program :devices)
                          collect (list (get-program-build-info program i :status)
                                        (get-program-build-info program i :log)))))
