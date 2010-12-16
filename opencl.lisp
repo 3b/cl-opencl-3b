@@ -166,12 +166,12 @@
 (defparameter *lisp-type-map*
   (alexandria:plist-hash-table '(single-float :float
                                  double-float :double
-                                 (unsigned-byte 8) :unsigned-char
-                                 (signed-byte 8) :signed-char
-                                 (unsigned-byte 16) :unsigned-short
-                                 (signed-byte 16) :signed-short
-                                 (unsigned-byte 32) :unsigned-int32
-                                 (signed-byte 32) :signed-int32)
+                                 (unsigned-byte 8) :uint8
+                                 (signed-byte 8) :int8
+                                 (unsigned-byte 16) :uint16
+                                 (signed-byte 16) :int16
+                                 (unsigned-byte 32) :uint32
+                                 (signed-byte 32) :int32)
                                :test 'equal))
 ;;; 5.2.2 Reading, Writing and Copying Buffer Objects
 (defun enqueue-read-buffer (command-queue buffer count
