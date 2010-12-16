@@ -587,11 +587,24 @@
 (defctype gl-uint :unsigned-int)
 (defctype gl-int :int)
 
+;; not sure if it would be better to just use gl:enum here or keep it specific
+(defcenum (gl-texture-target uint)
+  (:texture-2d #x0de1)
+  (:texture-cube-map-positive-x #x8515)
+  (:texture-cube-map-positive-y #x8517)
+  (:texture-cube-map-positive-z #x8519)
+  (:texture-cube-map-negative-x #x8516)
+  (:texture-cube-map-negative-y #x8518)
+  (:texture-cube-map-negative-z #x851a)
+  (:texture-rectangle #x84f5)
+  (:texture-rectangle-arb #x84f5)
+  (:texture-3d #x806F))
+
 (defcenum (gl-object-type uint)
-  (:object-buffer       #x2000)
-  (:object-texture-2d   #x2001)
-  (:object-texture-3d   #x2002)
-  (:object-renderbuffer #x2003))
+  (:buffer       #x2000)
+  (:texture-2d   #x2001)
+  (:texture-3d   #x2002)
+  (:renderbuffer #x2003))
 
 (defcenum (gl-texture-info uint)
   (:texture-target #x2004)

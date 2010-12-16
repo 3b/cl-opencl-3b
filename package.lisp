@@ -45,4 +45,5 @@
    #:create-from-gl-buffer
    #:enqueue-acquire-gl-objects
    #:enqueue-release-gl-objects
-   #:device-extension-present-p))
+   #:device-extension-present-p
+   #:create-from-gl-texture-2d))

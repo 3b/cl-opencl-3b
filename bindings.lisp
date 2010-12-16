@@ -575,7 +575,7 @@
 (defcfun ("clCreateFromGLTexture2D" create-from-gl-texture-2d) mem
   (context context)
   (flags mem-flags)
-  (target gl-enum)
+  (target gl-texture-target)
   (miplevel gl-int)
   (texture gl-uint)
   (errcode-ret (:pointer error-code)))
@@ -584,7 +584,7 @@
 (defcfun ("clCreateFromGLTexture3D" create-from-gl-texture-3d) mem
   (context context)
   (flags mem-flags)
-  (target gl-enum)
+  (target gl-texture-target)
   (miplevel gl-int)
   (texture gl-uint)
   (errcode-ret (:pointer error-code)))

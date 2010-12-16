@@ -473,3 +473,9 @@
     (check-return
         (%cl:enqueue-release-gl-objects command-queue c p
                                         0 (null-pointer) (null-pointer)))))
+
+;;; 9.12.3 / 9.8.3 CL Image Objects -> GL Textures
+
+(defun create-from-gl-texture-2d (context usage texture-target miplevel texture)
+  (check-errcode-arg (%cl:create-from-gl-texture-2d context usage texture-target miplevel texture)))
+
