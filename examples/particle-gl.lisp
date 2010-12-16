@@ -204,22 +204,6 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
     (mapcar '%unlock-system-buffers (systems window))
     (finish command-queue)))
 
-
-#+unix
-(cffi:defcfun ("glXGetCurrentContext" *-get-current-context) :pointer)
-#+unix
-(cffi:defcfun ("glXGetCurrentDisplay" *-get-current-display-or-hdc) :pointer)
-#+win32
-(cffi:defcfun ("wglGetCurrentContext" *-get-current-context) :pointer)
-#+win32
-(cffi:defcfun ("wglGetCurrentDC" *-get-current-display-or-hdc) :pointer)
-#+darwin
-(cffi:defcfun ("CLGGetCurrentContext" cgl-get-current-context) :pointer)
-#+darwin
-(cffi:defcfun ("CGLGetShareGroup" cgl-get-share-group) :pointer
-  (context :pointer))
-
-
 (defun reload-programs (w)
   (loop while *programs*
      do (release-program (pop *programs*)))
@@ -234,24 +218,8 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
       (setf (kernel w) kernel))))
 
 (defmethod glut:display-window :before ((w opencl-particles-window))
-  (cond
-    ((device-extension-present-p (device w) "cl_khr_gl_sharing")
-       (setf *context*
-             (create-context (list (device w))
-                             :platform *platform*
-                             ;; unix, win32, egl use roughly same api:
-                             #+ (or unix win32) :gl-context-khr
-                             #+ (or unix win32) (*-get-current-context)
-                             #+ unix :glx-display-khr
-                             #+ win32 :wgl-hdc-khr
-                             #+ (or unix win32) (*-get-current-display-or-hdc)
-                             ;; but apple is different:
-                             #+ darwin :cgl-sharegroup-khr
-                             #+ darwin (cgl-get-share-group
-                                        (cgl-get-current-context)))))
-    ((device-extension-present-p (device w) "cl_APPLE_gl_sharing")
-     (error "context sharing not implemented yet for cl_APPLE_gl_sharing"))
-     (t (error "no context sharing extension found in device?")))
+  (setf *context*
+        (opencl-example-utils:create-shared-context *platform* (device w)))
   (push (create-command-queue *context* (device w)) *command-queues*)
   (reload-programs w)
   (gl:enable :depth-test :multisample))
