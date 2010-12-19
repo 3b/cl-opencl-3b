@@ -447,7 +447,10 @@
 ;; not sure about the API here...
 ;; for now requiring global-size, and getting dimensions from legth of that
 (defun enqueue-nd-range-kernel (command-queue kernel global-size
-                                &key global-offset local-size)
+                                &key global-offset local-size
+                                wait-list event)
+  (when (or event wait-list)
+    (error "events and wait lists not done yet in enqueue-nd-range-kernel"))
   (let* ((global-size (alexandria:ensure-list global-size))
          (global-offset (alexandria:ensure-list global-offset))
          (local-size (alexandria:ensure-list local-size))
@@ -504,4 +507,5 @@
 
 (defun create-from-gl-texture-2d (context usage texture-target miplevel texture)
   (check-errcode-arg (%cl:create-from-gl-texture-2d context usage texture-target miplevel texture)))
+
 
