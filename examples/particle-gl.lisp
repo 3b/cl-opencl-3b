@@ -59,10 +59,13 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
 (defparameter *particles-per-click* 100000)
 
 
-(defun now ()
+#++(defun now ()
   (float (+ (get-universal-time)
             (nth-value 1 (floor (/ (get-internal-real-time)
                                    internal-time-units-per-second))))
+         1d0))
+(defun now ()
+  (float (/ (get-internal-real-time) internal-time-units-per-second)
          1d0))
 
 
@@ -199,7 +202,7 @@ __kernel void particles(__global float4* pos, __global float4* v, float dt, floa
     (mapcar '%unlock-system-buffers (systems window))
     (finish command-queue)))
 
-(defun reload-programs (w)
+(defmethod reload-programs ((w opencl-particles-window) &key &allow-other-keys)
   (loop while *programs*
      do (release-program (pop *programs*)))
   (let ((program (create-program-with-source *context* *program-source*)))
