@@ -69,6 +69,18 @@ manually released)"
                                              (cffi::null-pointer)))
        (foreign-string-to-lisp s)))))
 
+(defun split-extension-string (extension-string)
+  (loop
+     for start = 0 then (1+ end)
+     for end = (position #\Space extension-string :start start)
+     for ext = (subseq extension-string start end)
+     unless (string= ext "")
+     collect ext
+     while end))
+
+(defun get-extension-list (platform-id)
+  (split-extension-string (get-platform-info platform-id :extensions)))
+
 (defun extension-present-p (platform-id name)
   "Check for presence of extension NAME in cl extension list, not
 currently implemented for speed, so avoid in inner loops"
@@ -86,6 +98,9 @@ currently implemented for speed, so avoid in inner loops"
            (or (= end (length extension-string))
                (and (< end (length extension-string))
                     (char= #\space (char extension-string end))))))))
+
+(defun get-device-extension-list (device-id)
+  (split-extension-string (get-device-info device-id :extensions)))
 
 (defun device-extension-present-p (device-id name)
   "Check for presence of extension NAME in cl extension list, not
@@ -113,6 +128,49 @@ currently implemented for speed, so avoid in inner loops"
   (get-counted-list %cl:get-device-ids (platform-id device-types)
                     '%cl:device-id))
 
+(defun device-filter (rules)
+  (lambda (device)
+    (let ((extensions (ocl:get-device-extension-list device)))
+      (labels ((eval-rule (r)
+                 (cond
+                   ((null r)
+                    ;; we treat empty rule as always matching, since
+                    ;; it simplifies things, and not matching anything
+                    ;; doesn't seem very useful
+                    t)
+                   ((stringp r)
+                    (not (not (member r extensions :test 'string=))))
+                   ((and (consp r) (eq (car r) 'or))
+                    (if (cdr r)
+                        (some 'identity (mapcar #'eval-rule (cdr r)))
+                        nil)
+                    #++(let ((a (mapcar #'eval-rule (cdr r))))
+                      (format t "eval rule ~s (~s)" r a)
+                      (format t " -> ~s~%"  (some 'identity a))
+                      (some 'identity a)))
+                   ((and (consp r) (eq (car r) 'and))
+                    (if (cdr r)
+                        (every 'identity (mapcar #'eval-rule (cdr r)))
+                        t)
+                    #++(let ((a (mapcar #'eval-rule (cdr r))))
+                      (format t "eval rule ~s (~s)" r a)
+                      (format t " => ~s~%" (every 'identity a))
+                      (every 'identity a)))
+                   (t (error "don't know how to evaluate device-filter rule ~s?" r)))))
+        (eval-rule rules)))))
+
+;; todo: add keywords for extension names in addition to just strings?
+(defun get-device-ids-with-extensions (platform-id rules &rest device-types)
+  "like get-device-ids, but limit to devices with a specific set of extensions,
+specified in a format similar to feature expressions:
+  A string specifies a required extension.
+  A list starting with OR specifies a list of alternatives, at least 1 of
+    which must match
+  A list starting with AND specifies a list of requirements, all of which
+    must match"
+  ;; should NIL always match or never match for rules?
+  (remove-if-not (device-filter rules)
+                 (apply 'get-device-ids platform-id device-types)))
 
 (defmacro define-info-getter (name (&rest args) fun &body body)
   (let ((count-temp (gensym))

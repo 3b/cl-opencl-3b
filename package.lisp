@@ -46,4 +46,8 @@
    #:enqueue-acquire-gl-objects
    #:enqueue-release-gl-objects
    #:device-extension-present-p
-   #:create-from-gl-texture-2d))
+   #:create-from-gl-texture-2d
+   #:get-device-extension-list
+   #:get-extension-list
+   #:get-device-ids-with-extensions
+   ))
