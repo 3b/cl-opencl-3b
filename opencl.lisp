@@ -228,6 +228,19 @@
             (progn ,@body)
          (enqueue-unmap-mem-object ,command-queue ,buffer ,p)))))
 
+;;; 5.3.1 Creating Image Objects
+(defmacro with-image-format ((var channel-order channel-type) &body body)
+  `(with-foreign-object (,var '%cl:image-format)
+     (setf (foreign-slot-value ,var '%cl:image-format '%cl::image-channel-order)
+           ,channel-order
+           (foreign-slot-value ,var '%cl:image-format '%cl::image-channel-data-type)
+           ,channel-type)
+     ,@body))
+
+(defun create-image-2d (context channel-order channel-type width height &key flags (row-pitch 0))
+  ;; todo: load from array, use host ptr, etc
+  (with-image-format (image-format channel-order channel-type)
+    (check-errcode-arg (%cl:create-image-2d context flags image-format width height row-pitch (cffi:null-pointer)))))
 
 ;;; 5.3.3
 #++

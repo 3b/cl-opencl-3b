@@ -51,4 +51,5 @@
    #:get-extension-list
    #:get-device-ids-with-extensions
    #:%set-kernel-arg
+   #:create-image-2d
    ))
