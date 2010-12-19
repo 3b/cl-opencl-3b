@@ -9,5 +9,7 @@
     :components
     ((:file "opengl-examples-package")
      (:file "util")
+     (:file "opencl-glut")
      (:file "particle-gl")
+     (:file "gl-texture")
      ))))
