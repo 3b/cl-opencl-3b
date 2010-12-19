@@ -50,4 +50,5 @@
    #:get-device-extension-list
    #:get-extension-list
    #:get-device-ids-with-extensions
+   #:%set-kernel-arg
    ))

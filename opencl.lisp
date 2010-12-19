@@ -383,10 +383,23 @@
   (with-foreign-object (p :pointer)
     (setf (mem-ref p :pointer) buffer)
     (check-return (%cl:set-kernel-arg kernel index (foreign-type-size '%cl:mem) p))))
+
 (defun %set-kernel-arg-image (kernel index image)
-  (check-return (%cl:set-kernel-arg kernel index (foreign-type-size '%cl:sampler) image)))
+  (with-foreign-object (p :pointer)
+    (setf (mem-ref p :pointer) image)
+    (check-return (%cl:set-kernel-arg kernel index (foreign-type-size '%cl:mem) p))))
+
+(defun %set-kernel-arg-sampler (kernel index sampler)
+  (with-foreign-object (p :pointer)
+    (setf (mem-ref p :pointer) sampler)
+    (check-return (%cl:set-kernel-arg kernel index (foreign-type-size '%cl:sampler) sampler))))
 
 (defun %set-kernel-arg-number (kernel index value type)
+  (with-foreign-object (p type)
+    (setf (mem-ref p type) value)
+    (check-return (%cl:set-kernel-arg kernel index (foreign-type-size type) p))))
+
+(defun %set-kernel-arg (kernel index value type)
   (with-foreign-object (p type)
     (setf (mem-ref p type) value)
     (check-return (%cl:set-kernel-arg kernel index (foreign-type-size type) p))))
