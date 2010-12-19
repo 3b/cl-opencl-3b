@@ -21,10 +21,27 @@
   (cl:setf *cl-extension-resetter-list* cl:nil))
 
 
+(cl:defmacro defclfun (name return-type cl:&body args)
+  `(cffi:defcfun name ,return-type ,@args))
+#++
+(cl:defmacro defclfun (name return-type cl:&body args)
+  (cl:let ((n (cl:gensym (cl:second name))))
+    `(cl:progn
+       (cffi:defcfun (,(cl:car name) ,n) ,return-type ,@args)
+       (cl:defun ,(cl:second name) ,(cl:mapcar 'cl:first args)
+         #++(cl:format cl:t "call ~s:~%   ~s~%" ',name
+                    (cl:list ,@(cl:loop for (i cl:nil) in args
+                                        collect (cl:format cl:nil "~s:" i)
+                                        collect i)))
+         (,n ,@(cl:mapcar 'cl:first args))
+         ))))
+
+
 (cl:defmacro defclextfun ((cname lname) return-type cl:&body args)
   (alexandria:with-unique-names (pointer)
     `(cl:let ((,pointer (null-pointer)))
        (cl:defun ,lname ,(cl:mapcar #'cl:car args)
+         #++(cl:format cl:t "call ext ~s: ~s~%" ',lname (cl:list ,@(cl:mapcar 'cl:first args)))
          (cl:when (null-pointer-p ,pointer)
            (cl:setf ,pointer (get-extension-function-address ,cname))
            (cl:assert (cl:not (null-pointer-p ,pointer)) ()

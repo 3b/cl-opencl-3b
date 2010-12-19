@@ -23,13 +23,13 @@
 
 (cl:in-package #:cl-opencl-bindings)
 
-(cffi:defcfun ("clCreateKernelsInProgram" create-kernels-in-program) error-code
+(defclfun ("clCreateKernelsInProgram" create-kernels-in-program) error-code
   (program program)
   (num_kernels uint)
   (kernels (:pointer kernel))
   (num-kernels-ret (:pointer uint)))
 
-(cffi:defcfun ("clCreateContext" create-context) context
+(defclfun ("clCreateContext" create-context) context
   (properties (:pointer context-properties))
   (num-devices uint)
   (devices (:pointer device-id))
@@ -37,14 +37,14 @@
   (user-data (:pointer :void))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clGetImageInfo" get-image-info) error-code
+(defclfun ("clGetImageInfo" get-image-info) error-code
   (image mem)
   (param-name image-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clGetProgramBuildInfo" get-program-build-info) error-code
+(defclfun ("clGetProgramBuildInfo" get-program-build-info) error-code
   (program program)
   (device device-id)
   (param-name program-build-info)
@@ -52,17 +52,17 @@
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clCreateContextFromType" create-context-from-type) context
+(defclfun ("clCreateContextFromType" create-context-from-type) context
   (properties (:pointer context-properties))
   (device-type device-type)
   (pfn-notify :pointer) ;; type?
   (user-data (:pointer :void))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clRetainMemObject" retain-mem-object) error-code
+(defclfun ("clRetainMemObject" retain-mem-object) error-code
   (memobj mem))
 
-(cffi:defcfun ("clEnqueueMapBuffer" enqueue-map-buffer) (:pointer :void)
+(defclfun ("clEnqueueMapBuffer" enqueue-map-buffer) (:pointer :void)
   (command-queue command-queue)
   (buffer mem)
   (blocking-map-p bool)
@@ -76,30 +76,30 @@
 
 
 ;; 1.0 deprecated in 1.1
-(cffi:defcfun ("clSetCommandQueueProperty" set-command-queue-property)
+(defclfun ("clSetCommandQueueProperty" set-command-queue-property)
     error-code
   (command-queue command-queue)
   (properties command-queue-properties)
   (enable bool)
   (old-properties (:pointer command-queue-properties)))
 
-(cffi:defcfun ("clSetKernelArg" set-kernel-arg) error-code
+(defclfun ("clSetKernelArg" set-kernel-arg) error-code
   (kernel kernel)
   (arg-index uint)
   (arg-size size-t)
   (arg-value (:pointer :void)))
 
-(cffi:defcfun ("clEnqueueMarker" enqueue-marker) error-code
+(defclfun ("clEnqueueMarker" enqueue-marker) error-code
   (command-queue command-queue)
   (event (:pointer event)))
 
-(cffi:defcfun ("clEnqueueBarrier" enqueue-barrier) error-code
+(defclfun ("clEnqueueBarrier" enqueue-barrier) error-code
   (command-queue command-queue))
 
-(cffi:defcfun ("clReleaseSampler" release-sampler) error-code
+(defclfun ("clReleaseSampler" release-sampler) error-code
   (sampler sampler))
 
-(cffi:defcfun ("clEnqueueReadBuffer" enqueue-read-buffer) error-code
+(defclfun ("clEnqueueReadBuffer" enqueue-read-buffer) error-code
   (command-queue command-queue)
   (buffer mem)
   (blocking-read-p bool)
@@ -110,47 +110,47 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clGetDeviceIDs" get-device-ids) error-code
+(defclfun ("clGetDeviceIDs" get-device-ids) error-code
   (platform platform-id)
   (device-type device-type)
   (num-entries uint)
   (devices (:pointer device-id))
   (num-devices (:pointer uint)))
 
-(cffi:defcfun ("clFlush" flush) error-code
+(defclfun ("clFlush" flush) error-code
   (command-queue command-queue))
 
-(cffi:defcfun ("clCreateCommandQueue" create-command-queue) command-queue
+(defclfun ("clCreateCommandQueue" create-command-queue) command-queue
   (context context)
   (device device-id)
   (properties command-queue-properties)
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clCreateBuffer" create-buffer) mem
+(defclfun ("clCreateBuffer" create-buffer) mem
   (context context)
   (flags mem-flags)
   (size size-t)
   (host-ptr (:pointer :void))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clGetProgramInfo" get-program-info) error-code
+(defclfun ("clGetProgramInfo" get-program-info) error-code
   (program program)
   (param-name program-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clReleaseContext" release-context) error-code
+(defclfun ("clReleaseContext" release-context) error-code
   (context context))
 
-(cffi:defcfun ("clEnqueueTask" enqueue-task) error-code
+(defclfun ("clEnqueueTask" enqueue-task) error-code
   (command-queue command-queue)
   (kernel kernel)
   (num-events-in-wait-list uint)
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clEnqueueCopyBuffer" enqueue-copy-buffer) error-code
+(defclfun ("clEnqueueCopyBuffer" enqueue-copy-buffer) error-code
   (command-queue command-queue)
   (src-buffer mem)
   (dst-buffer mem)
@@ -161,14 +161,14 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clCreateProgramWithSource" create-program-with-source) program
+(defclfun ("clCreateProgramWithSource" create-program-with-source) program
   (context context)
   (count uint)
   (strings (:pointer :string))
   (lengths (:pointer size-t))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clEnqueueWriteImage" enqueue-write-image) error-code
+(defclfun ("clEnqueueWriteImage" enqueue-write-image) error-code
   (command-queue command-queue)
   (image mem)
   (blocking-write bool)
@@ -182,7 +182,7 @@
   (event (:pointer event)))
 
 
-(cffi:defcfun ("clEnqueueWriteBuffer" enqueue-write-buffer) error-code
+(defclfun ("clEnqueueWriteBuffer" enqueue-write-buffer) error-code
   (command-queue command-queue)
   (buffer mem)
   (blocking-write-p bool)
@@ -193,10 +193,10 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clFinish" finish) error-code
+(defclfun ("clFinish" finish) error-code
   (command-queue command-queue))
 
-(cffi:defcfun ("clEnqueueCopyImageToBuffer" enqueue-copy-image-to-buffer)
+(defclfun ("clEnqueueCopyImageToBuffer" enqueue-copy-image-to-buffer)
     error-code
   (command-queue command-queue)
   (src-image mem)
@@ -208,7 +208,7 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clBuildProgram" build-program) error-code
+(defclfun ("clBuildProgram" build-program) error-code
   (program program)
   (num-devices uint)
   (device-list (:pointer device-id))
@@ -216,7 +216,7 @@
   (pfn-notify :pointer) ;; type
   (user-data (:pointer :void)))
 
-(cffi:defcfun ("clEnqueueMapImage" enqueue-map-image) (:pointer :void)
+(defclfun ("clEnqueueMapImage" enqueue-map-image) (:pointer :void)
   (command-queue command-queue)
   (image mem)
   (blocking-map bool)
@@ -230,26 +230,26 @@
   (event (:pointer event))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clRetainSampler" retain-sampler) error-code
+(defclfun ("clRetainSampler" retain-sampler) error-code
   (sampler sampler))
 
-(cffi:defcfun ("clGetDeviceInfo" get-device-info) error-code
+(defclfun ("clGetDeviceInfo" get-device-info) error-code
   (device device-id)
   (param-name device-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clRetainContext" retain-context) error-code
+(defclfun ("clRetainContext" retain-context) error-code
   (context context))
 
-(cffi:defcfun ("clReleaseCommandQueue" release-command-queue) error-code
+(defclfun ("clReleaseCommandQueue" release-command-queue) error-code
   (command-queue command-queue))
 
-(cffi:defcfun ("clReleaseEvent" release-event) error-code
+(defclfun ("clReleaseEvent" release-event) error-code
   (event event))
 
-(cffi:defcfun ("clEnqueueReadImage" enqueue-read-image) error-code
+(defclfun ("clEnqueueReadImage" enqueue-read-image) error-code
   (command-queue command-queue)
   (image mem)
   (blocking-read bool)
@@ -263,7 +263,7 @@
   (event (:pointer event)))
 
 
-(cffi:defcfun ("clEnqueueCopyBufferToImage" enqueue-copy-buffer-to-image)
+(defclfun ("clEnqueueCopyBufferToImage" enqueue-copy-buffer-to-image)
     error-code
   (command-queue command-queue)
   (src-buffer mem)
@@ -275,21 +275,21 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clGetMemObjectInfo" get-mem-object-info) error-code
+(defclfun ("clGetMemObjectInfo" get-mem-object-info) error-code
   (memobj mem)
   (param-name mem-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clGetContextInfo" get-context-info) error-code
+(defclfun ("clGetContextInfo" get-context-info) error-code
   (context context)
   (param-name context-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clEnqueueUnmapMemObject" enqueue-unmap-mem-object) error-code
+(defclfun ("clEnqueueUnmapMemObject" enqueue-unmap-mem-object) error-code
   (command-queue command-queue)
   (memobj mem)
   (mapped-ptr (:pointer :void))
@@ -297,17 +297,17 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clGetCommandQueueInfo" get-command-queue-info) error-code
+(defclfun ("clGetCommandQueueInfo" get-command-queue-info) error-code
   (command-queue command-queue)
   (param-name command-queue-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clRetainKernel" retain-kernel) error-code
+(defclfun ("clRetainKernel" retain-kernel) error-code
   (kernel kernel))
 
-(cffi:defcfun ("clGetKernelWorkGroupInfo" get-kernel-work-group-info) error-code
+(defclfun ("clGetKernelWorkGroupInfo" get-kernel-work-group-info) error-code
   (kernel kernel)
   (device device-id)
   (param-name kernel-work-group-info)
@@ -315,10 +315,10 @@
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clRetainEvent" retain-event) error-code
+(defclfun ("clRetainEvent" retain-event) error-code
   (event event))
 
-(cffi:defcfun ("clEnqueueNDRangeKernel" enqueue-nd-range-kernel) error-code
+(defclfun ("clEnqueueNDRangeKernel" enqueue-nd-range-kernel) error-code
   (command-queue command-queue)
   (kernel kernel)
   (work-dim uint)
@@ -329,7 +329,7 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clGetSamplerInfo" get-sampler-info) error-code
+(defclfun ("clGetSamplerInfo" get-sampler-info) error-code
   (sampler sampler)
   (param-name sampler-info)
   (param-value-size size-t)
@@ -337,23 +337,23 @@
   (param-value-size-ret (:pointer size-t)))
 
 
-(cffi:defcfun ("clReleaseKernel" release-kernel) error-code
+(defclfun ("clReleaseKernel" release-kernel) error-code
   (kernel kernel))
 
-(cffi:defcfun ("clReleaseMemObject" release-mem-object) error-code
+(defclfun ("clReleaseMemObject" release-mem-object) error-code
   (memobj mem))
 
-(cffi:defcfun ("clCreateKernel" create-kernel) kernel
+(defclfun ("clCreateKernel" create-kernel) kernel
   (program program)
   (kernel-name :string)
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clGetPlatformIDs" get-platform-ids) error-code
+(defclfun ("clGetPlatformIDs" get-platform-ids) error-code
   (num-entries uint)
   (platforms (:pointer platform-id))
   (num-platforms (:pointer uint)))
 
-(cffi:defcfun ("clGetSupportedImageFormats" get-supported-image-formats)
+(defclfun ("clGetSupportedImageFormats" get-supported-image-formats)
     error-code
   (context context)
   (flags mem-flags)
@@ -362,7 +362,7 @@
   (image-formats (:pointer image-format))
   (num-image-format (:pointer uint)))
 
-(cffi:defcfun ("clCreateProgramWithBinary" create-program-with-binary) program
+(defclfun ("clCreateProgramWithBinary" create-program-with-binary) program
   (context context)
   (num-devices uint)
   (device-list (:pointer device-id))
@@ -371,10 +371,10 @@
   (binary-status (:pointer int))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clRetainProgram" retain-program) error-code
+(defclfun ("clRetainProgram" retain-program) error-code
   (program program))
 
-(cffi:defcfun ("clEnqueueCopyImage" enqueue-copy-image) error-code
+(defclfun ("clEnqueueCopyImage" enqueue-copy-image) error-code
   (command-queue command-queue)
   (src-image mem)
   (dst-image mem)
@@ -385,10 +385,10 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clRetainCommandQueue" retain-command-queue) error-code
+(defclfun ("clRetainCommandQueue" retain-command-queue) error-code
   (command-queue command-queue))
 
-(cffi:defcfun ("clCreateImage2D" create-image-2d) mem
+(defclfun ("clCreateImage2D" create-image-2d) mem
   (context context)
   (flags mem-flags)
   (image-format (:pointer image-format))
@@ -398,7 +398,7 @@
   (host-ptr (:pointer :void))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clCreateImage3D" create-image-3d) mem
+(defclfun ("clCreateImage3D" create-image-3d) mem
   (context context)
   (flags mem-flags)
   (image-format :pointer)
@@ -410,47 +410,47 @@
   (host-ptr (:pointer :void))
   (error-code-ret (:pointer error-code)))
 
-(cffi:defcfun ("clWaitForEvents" wait-for-events) error-code
+(defclfun ("clWaitForEvents" wait-for-events) error-code
   (num-events uint)
   (event-list (:pointer event)))
 
-(cffi:defcfun ("clGetEventProfilingInfo" get-event-profiling-info) error-code
+(defclfun ("clGetEventProfilingInfo" get-event-profiling-info) error-code
   (event event)
   (param-name profiling-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clReleaseProgram" release-program) error-code
+(defclfun ("clReleaseProgram" release-program) error-code
   (program program))
 
-(cffi:defcfun ("clEnqueueWaitForEvents" enqueue-wait-for-events) error-code
+(defclfun ("clEnqueueWaitForEvents" enqueue-wait-for-events) error-code
   (command-queue command-queue)
   (num-events uint)
   (event-list (:pointer event)))
 
-(cffi:defcfun ("clGetPlatformInfo" get-platform-info) error-code
+(defclfun ("clGetPlatformInfo" get-platform-info) error-code
   (platform platform-id)
   (param-name platform-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clGetEventInfo" get-event-info) error-code
+(defclfun ("clGetEventInfo" get-event-info) error-code
   (event event)
   (param-name event-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret (:pointer size-t)))
 
-(cffi:defcfun ("clGetKernelInfo" get-kernel-info) error-code
+(defclfun ("clGetKernelInfo" get-kernel-info) error-code
   (kernel-name kernel)
   (param-name kernel-info)
   (param-value-size size-t)
   (param-value (:pointer :void))
   (param-value-size-ret :pointer))
 
-(cffi:defcfun ("clEnqueueNativeKernel" enqueue-native-kernel) error-code
+(defclfun ("clEnqueueNativeKernel" enqueue-native-kernel) error-code
   (command-queue command-queue)
   (user-func :pointer)
   (args (:pointer :void))
@@ -462,23 +462,23 @@
   (event-wait-list :pointer)
   (event (:pointer event)))
 
-(cffi:defcfun ("clCreateSampler" create-sampler) sampler
+(defclfun ("clCreateSampler" create-sampler) sampler
   (context context)
   (normalized-coords bool)
   (addressing-mode addressing-mode)
   (filter-mode filter-mode)
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clUnloadCompiler" unload-compiler) error-code)
+(defclfun ("clUnloadCompiler" unload-compiler) error-code)
 
 
 
 ;;; 1.1
-(cffi:defcfun ("clCreateUserEvent" create-user-event) event
+(defclfun ("clCreateUserEvent" create-user-event) event
   (context context)
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clEnqueueWriteBufferRect" enqueue-write-buffer-rect) int
+(defclfun ("clEnqueueWriteBufferRect" enqueue-write-buffer-rect) int
   (command-queue command-queue)
   (buffer mem)
   (blocking-write-p bool)
@@ -494,13 +494,13 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clSetEventCallback" set-event-callback) int
+(defclfun ("clSetEventCallback" set-event-callback) int
   (event event)
   (command-exec-callback-type int) ;; CL_COMPLETE = 0x0
   (callback :pointer)
   (user-data (:pointer :void)))
 
-(cffi:defcfun ("clEnqueueReadBufferRect" enqueue-read-buffer-rect) int
+(defclfun ("clEnqueueReadBufferRect" enqueue-read-buffer-rect) int
   (command-queue command-queue)
   (buffer mem)
   (blocking-read-p bool)
@@ -516,20 +516,20 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clCreateSubBuffer" create-sub-buffer) mem
+(defclfun ("clCreateSubBuffer" create-sub-buffer) mem
   (buffer mem)
   (flags mem-flags)
   (buffer-create-type buffer-create-type)
   (buffer-create-info (:pointer :void))
   (errcode-ret (:pointer error-code)))
 
-(cffi:defcfun ("clSetMemObjectDestructorCallback"
+(defclfun ("clSetMemObjectDestructorCallback"
                set-mem-object-destructor-callback) int
   (memobj mem)
   (callback :pointer)
   (user-data (:pointer :void)))
 
-(cffi:defcfun ("clEnqueueCopyBufferRect" enqueue-copy-buffer-rect) int
+(defclfun ("clEnqueueCopyBufferRect" enqueue-copy-buffer-rect) int
   (command-queue command-queue)
   (src-buffer mem)
   (dst-buffer mem)
@@ -544,7 +544,7 @@
   (event-wait-list (:pointer event))
   (event (:pointer event)))
 
-(cffi:defcfun ("clSetUserEventStatus" set-user-event-status) int
+(defclfun ("clSetUserEventStatus" set-user-event-status) int
   (event event)
   (execution-status int))
 
@@ -566,13 +566,13 @@
 
 ;; cl_gl.h
 
-(defcfun ("clCreateFromGLBuffer" create-from-gl-buffer) mem
+(defclfun ("clCreateFromGLBuffer" create-from-gl-buffer) mem
   (context context)
   (flags mem-flags)
   (bufobj gl-uint)
   (errcode-ret (:pointer error-code)))
 
-(defcfun ("clCreateFromGLTexture2D" create-from-gl-texture-2d) mem
+(defclfun ("clCreateFromGLTexture2D" create-from-gl-texture-2d) mem
   (context context)
   (flags mem-flags)
   (target gl-texture-target)
@@ -581,7 +581,7 @@
   (errcode-ret (:pointer error-code)))
 
 ;; 1.0
-(defcfun ("clCreateFromGLTexture3D" create-from-gl-texture-3d) mem
+(defclfun ("clCreateFromGLTexture3D" create-from-gl-texture-3d) mem
   (context context)
   (flags mem-flags)
   (target gl-texture-target)
@@ -590,20 +590,20 @@
   (errcode-ret (:pointer error-code)))
 
 ;;  1.0
-(defcfun ("clCreateFromGLRenderbuffer" create-from-gl-renderbuffer) mem
+(defclfun ("clCreateFromGLRenderbuffer" create-from-gl-renderbuffer) mem
   (context context)
   (flags mem-flags)
   (renderbuffer gl-uint)
   (errcode-ret (:pointer error-code)))
 
 ;; 1.0
-(defcfun ("clGetGLObjectInfo" get-gl-object-info) error-code
+(defclfun ("clGetGLObjectInfo" get-gl-object-info) error-code
   (memobj mem)
   (gl-object-type (:pointer gl-object-type))
   (gl-object-name (:pointer gl-uint)))
 
 ;; 1.0
-(defcfun ("clGetGLTextureInfo" get-gl-texture-info) error-code
+(defclfun ("clGetGLTextureInfo" get-gl-texture-info) error-code
   (memobj mem)
   (param-name gl-texture-info)
   (param-value-size size-t)
@@ -611,7 +611,7 @@
   (param-value-size-ret (:pointer size-t)))
 
 ;; 1.0
-(defcfun ("clEnqueueAcquireGLObjects" enqueue-acquire-gl-objects) error-code
+(defclfun ("clEnqueueAcquireGLObjects" enqueue-acquire-gl-objects) error-code
   (command-queue command-queue)
   (num-objects uint)
   (mem-objects (:pointer mem))
@@ -620,7 +620,7 @@
   (event (:pointer event)))
 
 ;; 1.0
-(defcfun ("clEnqueueReleaseGLObjects" enqueue-release-gl-objects) error-code
+(defclfun ("clEnqueueReleaseGLObjects" enqueue-release-gl-objects) error-code
   (command-queue command-queue)
   (num-objects uint)
   (mem-objects (:pointer mem))
