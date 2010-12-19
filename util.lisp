@@ -22,7 +22,7 @@
 
 
 (cl:defmacro defclfun (name return-type cl:&body args)
-  `(cffi:defcfun name ,return-type ,@args))
+  `(cffi:defcfun ,name ,return-type ,@args))
 #++
 (cl:defmacro defclfun (name return-type cl:&body args)
   (cl:let ((n (cl:gensym (cl:second name))))
