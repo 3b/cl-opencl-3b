@@ -379,13 +379,14 @@ specified in a format similar to feature expressions:
           (total-size (reduce '+ sizes)))
      (with-foreign-pointer (buffer total-size)
        (with-foreign-object (pointers '(:pointer :void) (length sizes))
-         (loop for j = 0 then (+ i j)
-            for i in sizes
+         (loop for j = 0 then (+ size j)
+            for size in sizes
+            for i from 0
             do (setf (mem-aref pointers :pointer i) (inc-pointer buffer j)))
          (check-return
           (%cl:get-program-info program :binaries
                                 (* (foreign-type-size :pointer) (length sizes))
-                                buffer
+                                pointers
                                 (cffi:null-pointer)))
          (loop for i from 0
             for size in sizes
