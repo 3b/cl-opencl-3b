@@ -179,7 +179,7 @@
                             (offset 0) (element-type 'single-float))
   (let* ((foreign-type (gethash element-type *lisp-type-map*))
          (octet-count (* count (foreign-type-size foreign-type)))
-         (array (make-array octet-count
+         (array (make-array count
                             :element-type element-type)))
     (when (or event wait-list)
       (error "events and wait lists not done yet in enqueue-read-buffer"))
