@@ -352,7 +352,7 @@
         (let ((status (loop for i in (get-program-info program :devices)
                          collect (list (get-program-build-info program i :status)
                                        (get-program-build-info program i :log)))))
-          (error "Build-program returned :buld-program-failure:~:{~&~s : ~s~}" status))))))
+          (error "Build-program returned :build-program-failure:~:{~&~s : ~s~}" status))))))
 )
 
 ;;; 5.6.4 Unloading the OpenCL Compiler
