@@ -316,7 +316,18 @@ specified in a format similar to feature expressions:
   (:profile :string)
   (:version :string)
   (:extensions :string)
-  (:platform %cl:platform-id))
+  (:platform %cl:platform-id)
+  ;; opencl 1.1
+  (:host-unified-memory %cl:bool)
+  (:preferred-vector-width-half %cl:uint)
+  (:native-vector-width-half %cl:uint)
+  (:native-vector-width-char %cl:uint)
+  (:native-vector-width-short %cl:uint)
+  (:native-vector-width-int %cl:uint)
+  (:native-vector-width-long %cl:uint)
+  (:native-vector-width-float %cl:uint)
+  (:native-vector-width-double %cl:uint)
+  (:opencl-c-version :string))
 
 (define-info-getter get-context-info (context param) %cl:get-context-info
   (:reference-count %cl:uint)
