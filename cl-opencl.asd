@@ -1,6 +1,6 @@
 
 (asdf:defsystem cl-opencl
-  :depends-on (cffi)
+  :depends-on (cffi alexandria)
   :serial t
   :components
   ((:file "bindings-package")

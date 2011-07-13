@@ -85,8 +85,22 @@
                             :extensions
                             :platform)
            for s = (foo 'get-device-info dev info)
-           do (format t "   param ~a = ~s~%" info  s)
-           ))))
+           do (format t "   param ~a = ~s~%" info  s))
+          (when (alexandria:starts-with-subseq "OpenCL 1.1"
+                                            (get-platform-info p :version))
+            (format t " ----~% device ~s : OpenCL 1.1 params~%" dev)
+            (loop for info in '(:preferred-vector-width-half
+                                :host-unified-memory
+                                :native-vector-width-char
+                                :native-vector-width-short
+                                :native-vector-width-int
+                                :native-vector-width-long
+                                :native-vector-width-float
+                                :native-vector-width-double
+                                :native-vector-width-half
+                                :opencl-c-version)
+               for s = (foo 'get-device-info dev info)
+               do (format t "   param ~a = ~s~%" info  s))))))
 
 #++
 (let* ((p (car (get-platform-ids)))
