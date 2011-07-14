@@ -1,29 +1,5 @@
 (in-package #:cl-opencl)
 
-(defmacro check-return (form &body handlers)
-  (let ((error-code (gensym)))
-    `(restart-case
-         (let ((,error-code ,form))
-           (case ,error-code
-             (:success ,error-code)
-             ,@handlers
-             (t (error "OpenCL error ~s from ~s" ,error-code ',(car form)))))
-       (continue () :report "Continue" ))))
-
-(defmacro get-counted-list (fun (&rest args) type)
-  (let ((fcount (gensym))
-        (count (gensym))
-        (buffer (gensym))
-        (i (gensym)))
-    `(with-foreign-object (,fcount '%cl:uint)
-       (check-return (,fun ,@args 0 (cffi:null-pointer) ,fcount))
-       (let ((,count (mem-aref ,fcount '%cl:uint)))
-         (when (> ,count 0)
-           (with-foreign-object (,buffer ,type (1+ ,count))
-             (check-return (,fun ,@args (1+ ,count) ,buffer ,fcount))
-             (loop for ,i below ,count
-                collect (mem-aref ,buffer ,type ,i))))))))
-
 #++(defun get-platform-ids ()
   "returns a list of available OpenCL Platform IDs (opaque, don't need to be
 manually released)"
