@@ -57,3 +57,29 @@
                      collect (cl:first arg))
           ,return-type)))))
 
+(defmacro define-finalized-resource-class (name release info)
+  (let ((pointer (gensym)))
+    `(progn
+       (defclass ,name ()
+         ((pointer :initarg :pointer :reader pointer)))
+
+       (defmethod initialize-instance :after ((,name ,name)
+                                              &key &allow-other-keys)
+         ;; todo: add to scoped resource manager
+         (let ((,pointer (when (slot-boundp ,name 'pointer)
+                           (pointer ,name))))
+           (when ,pointer
+             (tg:finalize ,name
+                          (lambda ()
+                            (format *debug-io* "finalizer releasing ~a with ~s references"
+                                    ',name
+                                    (,info ,pointer :reference-count))
+                            (,release ,pointer))))))
+
+       (defmethod release ((,name ,name))
+         (let ((,pointer (pointer ,name)))
+           (setf (slot-value ,name 'pointer) nil)
+           (tg:cancel-finalization ,name)
+           (when ,pointer
+             (,release ,pointer)))))))
+

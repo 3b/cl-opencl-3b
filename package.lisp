@@ -52,4 +52,5 @@
    #:get-device-ids-with-extensions
    #:%set-kernel-arg
    #:create-image-2d
-   ))
+   #:release
+   #:set-kernel-arg))

@@ -46,9 +46,22 @@
                     (setf (mem-aref ,var ',base-type (1+ i)) 0)))
        ,@body)))
 
-;; todo: error callback, better handling of properties stuff
-;; properties arg is ugly since it mixes pointers with enums
-;; only one option though, so handling it explicitly for now
+(defgeneric pointer (object))
+(defmethod pointer (object)
+  ;; fixme: probably should error instead of returning nil for unknown types?
+  (when (cffi:pointerp object)
+    object))
+
+(defclass device ()
+  ((pointer :initarg :pointer :reader pointer)))
+
+(define-finalized-resource-class context %release-context get-context-info)
+
+
+
+;; todo: error callback
+;;   callback is probably called from arbitrary threads, so need to
+;;   figure out how to deal with that first...
 (defun create-context (devices &rest properties
                        &key platform
                        ;; should this &allow-other-keys, or drop keys
@@ -60,19 +73,18 @@
                    wgl-hdc-khr cgl-sharegroup-khr egl-display-khr
                    context-property-use-cgl-sharegroup-apple))
   (let ((devices (alexandria:ensure-list devices)))
-    ;;let ((properties nil))
-    ;; (when platform
-    ;;   (push (pointer-address platform) properties)
-    ;;   (push :platform properties))
     (with-opencl-plist (props %cl:context-properties properties)
       (with-foreign-objects ((devs '%cl:device-id (length devices)))
        (loop for i from 0
           for dev in devices
-          do (setf (mem-aref devs '%cl:device-id i) dev))
-       (check-errcode-arg
-        (%cl:create-context props (length devices) devs
-                            ;; todo: error callback
-                            (cffi:null-pointer) (cffi:null-pointer)))))))
+          do (setf (mem-aref devs '%cl:device-id i) (pointer dev)))
+       (make-instance 'context
+                      :pointer (check-errcode-arg
+                                (%cl:create-context props
+                                                    (length devices) devs
+                                                    ;; todo: error callback
+                                                    (cffi:null-pointer)
+                                                    (cffi:null-pointer))))))))
 
 (defun create-context-from-type (type &key platform)
   (let ((properties nil))
@@ -80,18 +92,21 @@
       (push (pointer-address platform) properties)
       (push :platform properties))
     (with-opencl-plist (props %cl:context-properties properties)
-      (check-errcode-arg
-       (%cl:create-context-from-type props type
-                                     ;; todo: error callback
-                                     (cffi:null-pointer) (cffi:null-pointer))))))
+      (make-instance 'context
+                     :pointer
+                     (check-errcode-arg
+                      (%cl:create-context-from-type props type
+                                                    ;; todo: error callback
+                                                    (cffi:null-pointer)
+                                                    (cffi:null-pointer)))))))
 
-(defun retain-context (context)
+(defun %retain-context (context)
   (check-return (%cl:retain-context context))
   ;; not sure if returning context here is useful or if it should just return
   ;; :success fom the low-level call?
   context)
 
-(defun release-context (context)
+(defun %release-context (context)
   (check-return (%cl:release-context context)))
 
 (defmacro with-context ((context devices &rest properties) &body body)
@@ -99,41 +114,48 @@
      (unwind-protect
           (progn
             ,@body)
-       (release-context ,context))))
+       (release ,context))))
 
 (defmacro with-context-from-type ((context type &rest properties) &body body)
   `(let ((,context (create-context-from-type ,type ,@properties)))
      (unwind-protect
           (progn
             ,@body)
-       (release-context ,context))))
+       (release ,context))))
 
 
 
 ;;;; 5.1 command queues
 
+(define-finalized-resource-class command-queue %release-command-queue
+  get-command-queue-info)
+
 (defun create-command-queue (context device &rest properties
                              &key out-of-order-exec-mode-enable
                              profiling-enable)
   (declare (ignore out-of-order-exec-mode-enable profiling-enable))
-  (check-errcode-arg (%cl:create-command-queue context device properties)))
+  (make-instance 'command-queue
+                 :pointer (check-errcode-arg (%cl:create-command-queue
+                                              (pointer context)
+                                              (pointer device)
+                                              properties))))
 
-(defun retain-command-queue (command-queue)
+(defun %retain-command-queue (command-queue)
   (check-return (%cl:retain-command-queue command-queue))
   command-queue)
 
-(defun release-command-queue (command-queue)
+(defun %release-command-queue (command-queue)
   (check-return (%cl:release-command-queue command-queue)))
 
 (defun set-command-queue-property (command-queue properties enable &key return-old-properties)
   (if return-old-properties
       (with-foreign-object (old '%cl:command-queue-properties)
-        (check-return (%cl:set-command-queue-property command-queue
+        (check-return (%cl:set-command-queue-property (pointer command-queue)
                                                       properties enable old))
         (mem-aref old '%cl:command-queue-properties)
         #++(foreign-bitfield-symbols '%cl:command-queue-properties old))
 
-      (check-return (%cl:set-command-queue-property command-queue
+      (check-return (%cl:set-command-queue-property (pointer command-queue)
                                                     properties enable
                                                     (cffi:null-pointer)))))
 
@@ -144,11 +166,17 @@
 
 ;;; 5.2.1 Creating Buffer Objects
 
+
+(define-finalized-resource-class buffer %release-mem-object get-mem-object-info)
+
 ;; fixme: should this support preallocated host memory area?
 ;; skipping for now, since it exposes ffi level stuff...
 ;; possibly just support copy-host-ptr mode, with copy from lisp array?
 (defun create-buffer (context size &rest flags)
-  (check-errcode-arg (%cl:create-buffer context flags size (cffi:null-pointer))))
+  (make-instance 'buffer
+                 :pointer (check-errcode-arg
+                           (%cl:create-buffer (pointer context) flags size
+                                              (cffi:null-pointer)))))
 
 ;; should size/count be implicit from array size?
 ;; foreign type?
@@ -158,10 +186,14 @@
     (loop repeat count
        for i below (array-total-size array)
        do (setf (mem-aref buf foreign-type i) (row-major-aref array i)))
-    (check-errcode-arg
-     (%cl:create-buffer context (adjoin :copy-host-pointer flags)
-                        (* count (foreign-type-size foreign-type))
-                        buf))))
+    (make-instance 'buffer
+                   :pointer
+                   (check-errcode-arg
+                    (%cl:create-buffer (pointer context)
+                                       (adjoin :copy-host-pointer flags)
+                                       (* count
+                                          (foreign-type-size foreign-type))
+                                       buf)))))
 
 (defparameter *lisp-type-map*
   (alexandria:plist-hash-table '(single-float :float
@@ -187,7 +219,9 @@
       (error "non-blocking enqueue-read-buffer doesn't work yet"))
     ;; w-p-t-v-d won't work with non-blocking read...
     (with-pointer-to-vector-data (p array)
-      (check-return (%cl:enqueue-read-buffer command-queue buffer blockp
+      (check-return (%cl:enqueue-read-buffer (pointer command-queue)
+                                             (pointer buffer)
+                                             blockp
                                              offset octet-count p
                                              0 (null-pointer) (null-pointer))))
     array))
@@ -207,7 +241,8 @@
     (unless blockp
       (error "non-blocking enqueue-map-buffer doesn't work yet"))
     (check-errcode-arg
-     (%cl:enqueue-map-buffer command-queue buffer blockp rw-flags
+     (%cl:enqueue-map-buffer (pointer command-queue) (pointer buffer)
+                             blockp rw-flags
                              offset octet-count
                              0 (null-pointer) (null-pointer)))))
 
@@ -229,18 +264,27 @@
          (enqueue-unmap-mem-object ,command-queue ,buffer ,p)))))
 
 ;;; 5.3.1 Creating Image Objects
+
+(define-finalized-resource-class image %release-mem-object get-image-info)
+
 (defmacro with-image-format ((var channel-order channel-type) &body body)
   `(with-foreign-object (,var '%cl:image-format)
      (setf (foreign-slot-value ,var '%cl:image-format '%cl::image-channel-order)
            ,channel-order
-           (foreign-slot-value ,var '%cl:image-format '%cl::image-channel-data-type)
+           (foreign-slot-value ,var '%cl:image-format
+                               '%cl::image-channel-data-type)
            ,channel-type)
      ,@body))
 
 (defun create-image-2d (context channel-order channel-type width height &key flags (row-pitch 0))
   ;; todo: load from array, use host ptr, etc
   (with-image-format (image-format channel-order channel-type)
-    (check-errcode-arg (%cl:create-image-2d context flags image-format width height row-pitch (cffi:null-pointer)))))
+    (make-instance 'image
+                   :pointer (check-errcode-arg
+                             (%cl:create-image-2d (pointer context) flags
+                                                  image-format width height
+                                                  row-pitch
+                                                  (cffi:null-pointer))))))
 
 ;;; 5.3.3
 #++
@@ -283,11 +327,11 @@
 
 ;;; 5.4.1 retaining and Releasing Memory Objects
 
-(defun retain-mem-object (object)
+(defun %retain-mem-object (object)
   (check-return (%cl:retain-mem-object object))
   object)
 
-(defun release-mem-object (object)
+(defun %release-mem-object (object)
   (check-return (%cl:release-mem-object object)))
 
 ;; set-mem-object-destructor-callback
@@ -298,11 +342,13 @@
   (when (or event wait-list)
     (error "events and wait lists not done yet in enqueue-unmap-mem-object"))
   (check-return
-   (%cl:enqueue-unmap-mem-object command-queue buffer pointer
+   (%cl:enqueue-unmap-mem-object (pointer command-queue) (pointer buffer)
+                                 pointer
                                  0 (null-pointer) (null-pointer))))
 
 ;;; 5.4.4 Memory Object Queries - see get.lisp
 
+(define-finalized-resource-class program %release-program get-program-info)
 
 ;;; 5.6.1 Creating Program Objects
 
@@ -317,16 +363,19 @@
     (with-foreign-string (cstring string)
       (with-foreign-object (p :pointer)
         (setf (mem-ref p :pointer) cstring)
-       (check-errcode-arg (%cl:create-program-with-source context 1 p
-                                                          (null-pointer)))))))
+        (make-instance 'program
+                       :pointer
+                       (check-errcode-arg
+                        (%cl:create-program-with-source (pointer context) 1 p
+                                                        (null-pointer))))))))
 
 ;; todo: create-program-with-binary
 
-(defun retain-program (program)
+(defun %retain-program (program)
   (check-return (%cl:retain-program program))
   program)
 
-(defun release-program (program)
+(defun %release-program (program)
   (check-return (%cl:release-program program)))
 
 ;;; 5.6.2 Building Program Executables
@@ -337,12 +386,12 @@
 ;;    lisp callback is probably nicer API, but harder to implement
 ;;  - also need to deal with thread safety stuff... not sure if it might
 ;;    be called from arbitrary threads or not
-;; todo: add keywords for know options?
+;; todo: add keywords for known options?
 (defun build-program (program &key devices (options-string "")
                       #++ notify-callback)
   (with-foreign-object (device-list :pointer (length devices))
     (with-foreign-string (options options-string)
-     (check-return (%cl:build-program program (length devices)
+     (check-return (%cl:build-program (pointer program) (length devices)
                                       (if devices device-list (null-pointer))
                                       options-string
                                       (null-pointer) (null-pointer))
@@ -364,19 +413,25 @@
 
 ;;; 5.7.1 Creating Kernel Objects
 
+(define-finalized-resource-class kernel %release-kernel get-kernel-info)
+
 (defun create-kernel (program name)
-  (check-errcode-arg (%cl:create-kernel program name)))
+  (make-instance 'kernel
+                 :pointer (check-errcode-arg
+                           (%cl:create-kernel (pointer program) name))))
 
 (defun create-kernels-in-program (program)
   ;; fixme: verify calling this twice is the correct way to figure out
   ;; how many kernels are in program...
-  (get-counted-list %cl:create-kernels-in-program (program) '%cl:kernel))
+  (mapcar (lambda (p) (make-instance 'kernel :pointer p))
+          (get-counted-list %cl:create-kernels-in-program ((pointer program))
+                            '%cl:kernel)))
 
-(defun retain-kernel (kernel)
+(defun %retain-kernel (kernel)
   (check-return (%cl:retain-kernel kernel))
   kernel)
 
-(defun release-kernel (kernel)
+(defun %release-kernel (kernel)
   (check-return (%cl:release-kernel kernel)))
 
 ;;; 5.7.2 Setting Kernel Arguments
@@ -417,6 +472,17 @@
     (setf (mem-ref p type) value)
     (check-return (%cl:set-kernel-arg kernel index (foreign-type-size type) p))))
 
+(defgeneric set-kernel-arg (kernel index value &key &allow-other-keys)
+  (:method ((kernel kernel) index (value buffer) &key)
+   (%set-kernel-arg-buffer (pointer kernel) index (pointer value)))
+  (:method ((kernel kernel) index (value image) &key)
+   (%set-kernel-arg-image (pointer kernel) index (pointer value)))
+  #++(:method ((kernel kernel) index (value sampler) &key)
+   (%set-kernel-arg-sampler (pointer kernel) index (pointer value)))
+  (:method ((kernel kernel) index (value number) &key type)
+    (unless type
+      (error "must specify a type for numeric arguments to SET-KERNEL-ARG"))
+    (%set-kernel-arg-number (pointer kernel) index value type)))
 
 ;;; 5.8 Executing Kernels
 (defmacro with-foreign-array ((name type source &key max empty-as-null-p) &body body)
@@ -459,7 +525,9 @@
                           (global-offset '%cl:size-t global-offset :max 3 :empty-as-null-p t)
                           (local-size '%cl:size-t local-size :max 3 :empty-as-null-p t))
       (check-return
-          (%cl:enqueue-nd-range-kernel command-queue kernel dims global-offset
+          (%cl:enqueue-nd-range-kernel (pointer command-queue)
+                                       (pointer kernel)
+                                       dims global-offset
                                        global-size local-size
                                        0 (null-pointer)
                                        (null-pointer)
@@ -473,15 +541,15 @@
 ;;; 5.13 Flush and Finish
 
 (defun flush (command-queue)
-  (check-return (%cl:flush command-queue)))
+  (check-return (%cl:flush (pointer command-queue))))
 
 (defun finish (command-queue)
-  (check-return (%cl:finish command-queue)))
+  (check-return (%cl:finish (pointer command-queue))))
 
 ;;; 9.8.2 CL Buffer Objects -> GL Buffer Objects
 
 (defun create-from-gl-buffer (context usage gl-buffer)
-  (check-errcode-arg (%cl:create-from-gl-buffer context usage gl-buffer)))
+  (check-errcode-arg (%cl:create-from-gl-buffer (pointer context) usage gl-buffer)))
 
 ;;; 9.8.6 Sharing memory objects that map to GL objects between CL and GL contexts
 
@@ -491,7 +559,7 @@
     (error "events and wait lists not done yet in enqueue-acquire-gl-objects"))
   (with-counted-foreign-array (c p '%cl:mem objects)
     (check-return
-        (%cl:enqueue-acquire-gl-objects command-queue c p
+        (%cl:enqueue-acquire-gl-objects (pointer command-queue) c p
                                         0 (null-pointer) (null-pointer)))))
 
 (defun enqueue-release-gl-objects (command-queue objects
@@ -500,12 +568,14 @@
     (error "events and wait lists not done yet in enqueue-release-gl-objects"))
   (with-counted-foreign-array (c p '%cl:mem objects)
     (check-return
-        (%cl:enqueue-release-gl-objects command-queue c p
+        (%cl:enqueue-release-gl-objects (pointer command-queue) c p
                                         0 (null-pointer) (null-pointer)))))
 
 ;;; 9.12.3 / 9.8.3 CL Image Objects -> GL Textures
 
 (defun create-from-gl-texture-2d (context usage texture-target miplevel texture)
-  (check-errcode-arg (%cl:create-from-gl-texture-2d context usage texture-target miplevel texture)))
+  (check-errcode-arg
+   (%cl:create-from-gl-texture-2d (pointer context) usage texture-target
+                                  miplevel texture)))
 
 

@@ -178,7 +178,8 @@ specified in a format similar to feature expressions:
         (fsize (gensym))
         (s (gensym))
         ;(object (car args))
-        (param (car (last args))))
+        (param (car (last args)))
+        (call-args (list* `(pointer ,(car args)) (cdr args))))
     `(defun ,name (,@args)
       (ecase ,param
         ,@(loop
@@ -195,7 +196,7 @@ specified in a format similar to feature expressions:
                                                `(,name ,@(butlast args 1) ,count-param))))
                          (with-foreign-object (,foreign-value ',base-type ,count-temp)
                            (check-return
-                            (,fun ,@args
+                            (,fun ,@call-args
                                   (* ,(foreign-type-size type)
                                      ,count-temp)
                                   ,foreign-value
@@ -217,14 +218,14 @@ specified in a format similar to feature expressions:
                           (eq (third form) nil))
              collect `(,pname
                        (with-foreign-object (,fsize '%cl:uint)
-                         (check-return (,fun ,@args
+                         (check-return (,fun ,@call-args
                                              0 (cffi::null-pointer)
                                              ,fsize))
                          (let ((,count-temp (floor (mem-aref ,fsize '%cl:uint)
                                                    ,(foreign-type-size type))))
                            (with-foreign-object (,foreign-value ',base-type ,count-temp)
                              (check-return
-                              (,fun ,@args
+                              (,fun ,@call-args
                                     (* ,(foreign-type-size type)
                                        ,count-temp)
                                     ,foreign-value
@@ -246,12 +247,12 @@ specified in a format similar to feature expressions:
              else if (eq type :string)
              collect `(,pname
                        (with-foreign-object (,fsize '%cl:uint)
-                         (check-return (,fun ,@args
+                         (check-return (,fun ,@call-args
                                              0 (cffi::null-pointer)
                                              ,fsize))
                          (let ((,count-temp (mem-aref  ,fsize'%cl:uint)))
                            (with-foreign-object (,s :uchar (1+ ,count-temp))
-                             (check-return (,fun ,@args (1+ ,count-temp)
+                             (check-return (,fun ,@call-args (1+ ,count-temp)
                                                  ,s
                                                  (cffi::null-pointer)))
                              (foreign-string-to-lisp ,s)))))
@@ -259,7 +260,7 @@ specified in a format similar to feature expressions:
              collect `(,pname
                        (with-foreign-object (,foreign-value ',type)
                          (check-return
-                          (,fun ,@args
+                          (,fun ,@call-args
                                 ,(foreign-type-size type)
                                 ,foreign-value
                                 (cffi:null-pointer)))

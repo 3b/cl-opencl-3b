@@ -1,6 +1,6 @@
 
 (asdf:defsystem cl-opencl
-  :depends-on (cffi alexandria)
+  :depends-on (cffi alexandria trivial-garbage)
   :serial t
   :components
   ((:file "bindings-package")
