@@ -5,11 +5,12 @@
   :components
   ((:file "bindings-package")
    (:file "library")
-   (:file "util")
+   (:file "bindings-util")
    (:file "types")
    (:file "bindings")
    ;; Lispifications.
    (:file "package")
+   (:file "util")
    (:file "get")
    (:file "opencl")
    ;...
