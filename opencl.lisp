@@ -2,6 +2,35 @@
 
 ;; todo: organize these better?
 
+;;; 5.9 events (out of order since lots of stuff uses them)
+
+(defun %retain-event (event)
+  (check-return (%cl:retain-event event))
+  event)
+
+(defun %release-event (event)
+  (check-return (%cl:release-event event)))
+
+(define-finalized-resource-class event %release-event get-event-info)
+
+;; should user events get a finalizer that sets status to an error status?
+;;   need to make sure we don't have extra instances for the same event
+;;   first though
+
+(defun create-user-event (context)
+  (make-instance 'event :pointer (check-errcode-arg
+                                  (%cl:create-user-event (pointer context)))))
+
+(defun set-user-event-status (event status)
+  (check-return (%cl:set-user-event-status (pointer event) status)))
+
+(defun wait-for-events (&rest wait-list)
+  (with-counted-foreign-array (wait-count wait-pointer '%cl:event
+                                          (mapcar 'pointer wait-list))
+    (check-return (%cl:wait-for-events wait-count wait-pointer))))
+
+;; todo: set-event-callback
+
 ;;; 4.3 contexts
 
 (defgeneric pointer (object))
@@ -14,7 +43,6 @@
   ((pointer :initarg :pointer :reader pointer)))
 
 (define-finalized-resource-class context %release-context get-context-info)
-
 
 
 ;; todo: error callback
@@ -88,15 +116,19 @@
 (define-finalized-resource-class command-queue %release-command-queue
   get-command-queue-info)
 
-(defun create-command-queue (context device &rest properties
+(defun create-command-queue (context device
                              &key out-of-order-exec-mode-enable
                              profiling-enable)
-  (declare (ignore out-of-order-exec-mode-enable profiling-enable))
-  (make-instance 'command-queue
-                 :pointer (check-errcode-arg (%cl:create-command-queue
-                                              (pointer context)
-                                              (pointer device)
-                                              properties))))
+  (let ((properties nil))
+    (when out-of-order-exec-mode-enable
+      (push :out-of-order-exec-mode-enable properties))
+    (when profiling-enable
+      (push :profiling-enable properties))
+    (make-instance 'command-queue
+                   :pointer (check-errcode-arg (%cl:create-command-queue
+                                                (pointer context)
+                                                (pointer device)
+                                                properties)))))
 
 (defun %retain-command-queue (command-queue)
   (check-return (%cl:retain-command-queue command-queue))
@@ -129,7 +161,7 @@
 
 ;; fixme: should this support preallocated host memory area?
 ;; skipping for now, since it exposes ffi level stuff...
-;; possibly just support copy-host-ptr mode, with copy from lisp array?
+;; possibly just support copy-host-pointer mode, with copy from lisp array?
 (defun create-buffer (context size &rest flags)
   (make-instance 'buffer
                  :pointer (check-errcode-arg
@@ -153,6 +185,113 @@
                                           (foreign-type-size foreign-type))
                                        buf)))))
 
+;; wrapper for foreign pointer + event, for use with async reads,
+;; mapped buffers, etc (see allocated-host-buffer, mapped-host-buffer)
+(defclass host-buffer ()
+  ((data-pointer :initarg :data-pointer :reader data-pointer)
+   ;; :ready (data-pointer is allocated and filled)
+   ;; :waiting (check EVENT for status)
+   ;; :invalid (uninitialized, unmapped, freed, etc)
+   (state :initarg :state :initform :invalid :reader state)
+   ;; may be NIL if we blocked on read
+   (event :initarg :event :reader event)
+   ;; function to call to release resources, called by RELEASE and
+   ;; used as finalizer. Call with object to remove finalizer and
+   ;; update object state/pointers/etc
+   (release-thunk :initarg :release-thunk :reader %release-thunk)))
+
+;; todo: locking, actually do something with the leaked pointers (gc
+;; thread, etc)
+(defparameter *leaked-resources* nil)
+
+(defun %free-pointer-thunk (event pointer)
+  (cond
+    (event
+     (let ((event-pointer (pointer event)))
+       (%retain-event event-pointer)
+       (lambda (&optional object)
+         (if (<= (get-event-info event-pointer :command-execution-status)
+                 (foreign-enum-value '%cl:command-execution-status :complete))
+             (progn
+               (when object
+                 (tg:cancel-finalization object)
+                 (setf (slot-value object 'data-pointer) nil
+                       (slot-value object 'state) :invalid))
+               (%release-event event-pointer)
+               (foreign-free pointer))
+             (progn
+               ;; if we got an object, we can still try again in the
+               ;; finalizer, so leave it active but invalidate the
+               ;; object to catch attempts to use it after explicit
+               ;; release
+               (when object
+                 (setf (slot-value object 'data-pointer) nil
+                       (slot-value object 'state) :invalid))
+               ;; If we are in the finalizer, and we can't safely free the
+               ;; memory, just complain and save it for later...
+               (unless object
+                 (push (list :pointer pointer :event-pointer event-pointer)
+                       *leaked-resources*)
+                 (format *debug-io* "finalizer failed to free memory ~s due to event ~s in state ~s~%"
+                         pointer event-pointer
+                         (get-event-info event-pointer
+                                         :command-execution-status))))))))
+    ;; no event, we can just free the pointer directly
+    (t
+     (lambda (&optional object)
+       (when object
+        (tg:cancel-finalization object)
+        (setf (slot-value object 'data-pointer) nil
+              (slot-value object 'state) :invalid))
+       (foreign-free pointer)))))
+
+(defun %unmap-buffer-thunk (queue event memobj pointer)
+  ;; finalizer needs to remember a command-queue, so it can enqueue an
+  ;;   unmap command
+  (let ((queue-pointer (pointer queue))
+        (event-pointer (when event (pointer event)))
+        (memobj-pointer (pointer memobj)))
+    (%retain-command-queue queue-pointer)
+    (%retain-mem-object memobj-pointer)
+    ;; we keep the event around so the unmap can be set to wait on it
+    (when event (%retain-event event-pointer))
+    ;; should we support RELEASE for mapped buffers, or require
+    ;; enqueue-unmap-buffer?
+    (lambda (&optional object)
+      (when object
+        (tg:cancel-finalization object)
+        (setf (slot-value object 'data-pointer) nil
+              (slot-value object 'state) :invalid))
+      (if event-pointer
+          (with-counted-foreign-array (wait-count wait-pointer
+                                                  '%cl:event
+                                                  (list event-pointer))
+            (%cl:enqueue-unmap-mem-object queue-pointer memobj-pointer pointer
+                                          wait-count wait-pointer
+                                          (cffi:null-pointer)))
+          (%cl:enqueue-unmap-mem-object queue-pointer memobj-pointer pointer
+                                        0 (cffi:null-pointer)
+                                        (cffi:null-pointer)))
+
+      (when event-pointer (%release-event event-pointer))
+      (%release-mem-object memobj-pointer)
+      (%release-command-queue queue-pointer))))
+
+;; ;; host-buffer that should be FOREIGN-FREEd in finalizer
+;; (defclass allocated-host-buffer (host-buffer)
+;;   ())
+;; 
+;; ;; host-buffer that needs to be unmap the buffer when finalized,
+;; ;; which requires closing over a command-queue and context
+;; (defclass mapped-host-buffer (host-buffer)
+;;   ())
+
+
+(defmethod release ((buffer host-buffer))
+  (funcall (%release-thunk buffer) buffer)
+  (when (event buffer)
+    (release (event buffer))))
+
 (defparameter *lisp-type-map*
   (alexandria:plist-hash-table '(single-float :float
                                  double-float :double
@@ -164,9 +303,9 @@
                                  (signed-byte 32) :int32)
                                :test 'equal))
 ;;; 5.2.2 Reading, Writing and Copying Buffer Objects
-(defun enqueue-read-buffer (command-queue buffer count
-                            &key (blockp t) wait-list event
-                            (offset 0) (element-type 'single-float))
+(defun %enqueue-read-buffer (command-queue buffer count
+                             &key (blockp t) wait-list event
+                             (offset 0) (element-type 'single-float))
   (let* ((foreign-type (gethash element-type *lisp-type-map*))
          (octet-count (* count (foreign-type-size foreign-type)))
          (array (make-array count
@@ -184,8 +323,41 @@
                                              0 (null-pointer) (null-pointer))))
     array))
 
+(defun enqueue-read-buffer (command-queue buffer count
+                            &key (blockp t) wait-list eventp
+                            (offset 0) (element-type 'single-float))
+  (let* ((foreign-type (gethash element-type *lisp-type-map*))
+         (octet-count (* count (foreign-type-size foreign-type)))
+         (host-pointer (cffi:foreign-alloc foreign-type :count count))
+         (event (check-return+events (wait-list (or eventp (not blockp)))
+                    (%cl:enqueue-read-buffer (pointer command-queue)
+                                             (pointer buffer)
+                                             blockp
+                                             offset octet-count host-pointer))))
+    (make-instance 'host-buffer
+                   :event event
+                   :data-pointer host-pointer
+                   :state (if blockp :ready :waiting)
+                   :release-thunk (%free-pointer-thunk event host-pointer))))
+
+
+(defun enqueue-copy-buffer (command-queue source-buffer dest-buffer
+                            ;; fixme: should this accept an element-type and count instead of raw octet count?
+                            octet-count
+                            &key wait-list eventp
+                            (source-offset 0)
+                            (dest-offset 0))
+  (check-return+events (wait-list eventp)
+      (%cl:enqueue-copy-buffer (pointer command-queue)
+                               (pointer source-buffer)
+                               (pointer dest-buffer)
+                               source-offset dest-offset
+                               octet-count)))
+
+
+
 ;;; 5.2.3 Mapping Buffer Objects
-(defun enqueue-map-buffer (command-queue buffer count
+(defun %enqueue-map-buffer (command-queue buffer count
                            &key (blockp t) wait-list event
                            (offset 0) (element-type 'single-float)
                            read write)
@@ -203,6 +375,41 @@
                              blockp rw-flags
                              offset octet-count
                              0 (null-pointer) (null-pointer)))))
+
+(defun enqueue-map-buffer (command-queue buffer count
+                           &key (blockp t) wait-list eventp
+                           (offset 0) (element-type 'single-float)
+                           read write)
+  (let* ((foreign-type (gethash element-type *lisp-type-map*))
+         (octet-count (* count (foreign-type-size foreign-type)))
+         rw-flags)
+    (when read (push :read rw-flags))
+    (when write (push :write rw-flags))
+    (with-foreign-object (event-pointer '%cl:event)
+      (with-counted-foreign-array (wait-count wait-pointer
+                                              '%cl:event
+                                              wait-list)
+        (let* ((pointer (check-errcode-arg
+                         (%cl:enqueue-map-buffer (pointer command-queue)
+                                                 (pointer buffer)
+                                                 blockp rw-flags
+                                                 offset octet-count
+                                                 wait-count wait-pointer
+                                                 (if (or eventp (not blockp))
+                                                     event-pointer
+                                                     (cffi:null-pointer)))))
+               (event (when (or eventp (not blockp))
+                        (make-instance 'event :pointer
+                                       (mem-aref event-pointer
+                                                 '%cl:event)))))
+          (make-instance 'read/map-buffer
+                         :event event
+                         :data-pointer pointer
+                         :state (if blockp :ready :waiting)
+                         :release-thunk (%unmap-buffer-thunk command-queue
+                                                             event
+                                                             buffer
+                                                             pointer)))))))
 
 (defmacro with-mapped-buffer ((p command-queue buffer count
                                  &key
@@ -297,12 +504,10 @@
 ;;; 5.4.2 Unmapping mapped memory objects
 (defun enqueue-unmap-mem-object (command-queue buffer pointer
                                  &key wait-list event)
-  (when (or event wait-list)
-    (error "events and wait lists not done yet in enqueue-unmap-mem-object"))
-  (check-return
+  (tg:cancel-finalization pointer)
+  (check-return+events (wait-list event)
    (%cl:enqueue-unmap-mem-object (pointer command-queue) (pointer buffer)
-                                 pointer
-                                 0 (null-pointer) (null-pointer))))
+                                 (data-pointer pointer))))
 
 ;;; 5.4.4 Memory Object Queries - see get.lisp
 
@@ -450,8 +655,6 @@
 (defun enqueue-nd-range-kernel (command-queue kernel global-size
                                 &key global-offset local-size
                                 wait-list event)
-  (when (or event wait-list)
-    (error "events and wait lists not done yet in enqueue-nd-range-kernel"))
   (let* ((global-size (alexandria:ensure-list global-size))
          (global-offset (alexandria:ensure-list global-offset))
          (local-size (alexandria:ensure-list local-size))
@@ -459,17 +662,11 @@
     (with-foreign-arrays ((global-size '%cl:size-t global-size :max 3)
                           (global-offset '%cl:size-t global-offset :max 3 :empty-as-null-p t)
                           (local-size '%cl:size-t local-size :max 3 :empty-as-null-p t))
-      (check-return
+      (check-return+events (wait-list event)
           (%cl:enqueue-nd-range-kernel (pointer command-queue)
                                        (pointer kernel)
                                        dims global-offset
-                                       global-size local-size
-                                       0 (null-pointer)
-                                       (null-pointer)
- )))
-)
-
-)
+                                       global-size local-size)))))
 
 
 
@@ -490,21 +687,15 @@
 
 (defun enqueue-acquire-gl-objects (command-queue objects
                                    &key wait-list event)
-  (when (or event wait-list)
-    (error "events and wait lists not done yet in enqueue-acquire-gl-objects"))
   (with-counted-foreign-array (c p '%cl:mem objects)
-    (check-return
-        (%cl:enqueue-acquire-gl-objects (pointer command-queue) c p
-                                        0 (null-pointer) (null-pointer)))))
+    (check-return+events (wait-list event)
+        (%cl:enqueue-acquire-gl-objects (pointer command-queue) c p))))
 
 (defun enqueue-release-gl-objects (command-queue objects
                                    &key wait-list event)
-  (when (or event wait-list)
-    (error "events and wait lists not done yet in enqueue-release-gl-objects"))
   (with-counted-foreign-array (c p '%cl:mem objects)
-    (check-return
-        (%cl:enqueue-release-gl-objects (pointer command-queue) c p
-                                        0 (null-pointer) (null-pointer)))))
+    (check-return+events (wait-list event)
+        (%cl:enqueue-release-gl-objects (pointer command-queue) c p))))
 
 ;;; 9.12.3 / 9.8.3 CL Image Objects -> GL Textures
 

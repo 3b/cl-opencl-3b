@@ -210,5 +210,6 @@
 #:get-gl-object-info
 #:get-gl-texture-info
 #:enqueue-acquire-gl-objects
-#:enqueue-release-gl-objects))
+#:enqueue-release-gl-objects
+#:command-execution-status))
 

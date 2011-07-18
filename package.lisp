@@ -53,4 +53,9 @@
    #:%set-kernel-arg
    #:create-image-2d
    #:release
-   #:set-kernel-arg))
+   #:set-kernel-arg
+   #:wait-for-events
+   #:data-pointer
+   #:event
+   #:get-event-info
+   #:enqueue-copy-buffer))

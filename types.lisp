@@ -228,12 +228,12 @@
   (:PROPERTIES                         #x1093))
 
 (defbitfield (mem-flags bitfield)
-  (:READ-WRITE                           #.(cl:ash 1 0))
-  (:WRITE-ONLY                           #.(cl:ash 1 1))
-  (:READ-ONLY                            #.(cl:ash 1 2))
-  (:USE-HOST-PTR                         #.(cl:ash 1 3))
-  (:ALLOC-HOST-PTR                       #.(cl:ash 1 4))
-  (:COPY-HOST-PTR                        #.(cl:ash 1 5)))
+  (:read-write                           #.(cl:ash 1 0))
+  (:write-only                           #.(cl:ash 1 1))
+  (:read-only                            #.(cl:ash 1 2))
+  (:use-host-pointer                     #.(cl:ash 1 3))
+  (:alloc-host-pointer                   #.(cl:ash 1 4))
+  (:copy-host-pointer                    #.(cl:ash 1 5)))
 
 (defcenum (channel-order uint)
   (:R                                        #x10B0)

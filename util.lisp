@@ -63,6 +63,22 @@
              (loop for ,i below ,count
                 collect (mem-aref ,buffer ,type ,i))))))))
 
+(defmacro check-return+events ((wait-list event-p) form &body handlers)
+  (alexandria:with-gensyms (wait-count wait-pointer event)
+    (let ((form `(with-counted-foreign-array (,wait-count ,wait-pointer
+                                                          '%cl:event
+                                                          (mapcar 'pointer
+                                                                  ,wait-list))
+                   (check-return
+                       ,(append form (list wait-count wait-pointer event))
+                     ,@handlers))))
+      `(if ,event-p
+           (with-foreign-object (,event '%cl:event)
+             ,form
+             (make-instance 'event :pointer (mem-aref ,event '%cl:event)))
+           (let ((,event (null-pointer)))
+             ,form)))))
+
 (defmacro check-errcode-arg (form)
   (let ((error-code (gensym))
         (ret (gensym)))
@@ -105,8 +121,9 @@
            (when ,pointer
              (tg:finalize ,name
                           (lambda ()
-                            (format *debug-io* "finalizer releasing ~a with ~s references"
+                            (format *debug-io* "finalizer releasing ~a ~s with ~s references~%"
                                     ',name
+                                    ,pointer
                                     (,info ,pointer :reference-count))
                             (,release ,pointer))))))
 

@@ -409,7 +409,9 @@ specified in a format similar to feature expressions:
 
 (define-info-getter get-event-info (event param) %cl:get-event-info
   (:command-queue %cl:command-queue)
+  (:context %cl:context)
   (:command-type %cl:command-type)
+  ;; returns a command-execution-status normally, or negative number for errors
   (:command-execution-status %cl:int)
   (:reference-count %cl:uint))
 
