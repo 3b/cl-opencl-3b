@@ -58,4 +58,5 @@
    #:data-pointer
    #:event
    #:get-event-info
-   #:enqueue-copy-buffer))
+   #:enqueue-copy-buffer
+   #:%enqueue-write-buffer))

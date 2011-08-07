@@ -355,6 +355,21 @@
                                octet-count)))
 
 
+;; should this take &key element-type or required foreign-type?
+(defun %enqueue-write-buffer (array command-queue buffer count
+                              &key (blockp t) wait-list event
+                              (offset 0) (element-type 'single-float))
+  (let* ((foreign-type (gethash element-type *lisp-type-map*))
+         (octet-count (* count (foreign-type-size foreign-type))))
+    (unless blockp
+      (error "non-blocking enqueue-write-buffer doesn't work yet"))
+    ;; w-p-t-v-d won't work with non-blocking read...
+    (with-pointer-to-vector-data (p array)
+      (check-return+events (wait-list event)
+          (%cl:enqueue-write-buffer (pointer command-queue)
+                                    (pointer buffer)
+                                    blockp
+                                    offset octet-count p)))))
 
 ;;; 5.2.3 Mapping Buffer Objects
 (defun %enqueue-map-buffer (command-queue buffer count
