@@ -372,7 +372,7 @@ specified in a format similar to feature expressions:
             for i from 0
             do (setf (mem-aref pointers :pointer i) (inc-pointer buffer j)))
          (check-return
-          (%cl:get-program-info program :binaries
+          (%cl:get-program-info (pointer program) :binaries
                                 (* (foreign-type-size :pointer) (length sizes))
                                 pointers
                                 (cffi:null-pointer)))

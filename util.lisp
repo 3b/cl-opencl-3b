@@ -70,7 +70,11 @@
                                                           (mapcar 'pointer
                                                                   ,wait-list))
                    (check-return
-                       ,(append form (list wait-count wait-pointer event))
+                       ,(append form (list wait-count
+                                           `(if ,wait-list
+                                                ,wait-pointer
+                                                (cffi:null-pointer))
+                                           event))
                      ,@handlers))))
       `(if ,event-p
            (with-foreign-object (,event '%cl:event)
