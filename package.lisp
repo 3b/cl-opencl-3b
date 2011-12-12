@@ -59,4 +59,5 @@
    #:event
    #:get-event-info
    #:enqueue-copy-buffer
-   #:%enqueue-write-buffer))
+   #:%enqueue-write-buffer
+   #:create-program-with-binary))

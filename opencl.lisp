@@ -635,7 +635,20 @@
                         (%cl:create-program-with-source (pointer context) 1 p
                                                         (null-pointer))))))))
 
-;; todo: create-program-with-binary
+(defun create-program-with-binary (context device binary-octets)
+  (with-counted-foreign-array (octets binary-pointer :uchar binary-octets)
+    (with-foreign-object (dp :pointer)
+      (setf (mem-ref dp :pointer) (pointer device))
+      (with-foreign-object (lp '%cl:size-t)
+        (setf (mem-ref lp '%cl:size-t) octets)
+        (with-foreign-object (bp :pointer)
+          (setf (mem-ref bp :pointer) binary-pointer)
+          (make-instance 'program
+                         :pointer
+                         (check-errcode-arg
+                          (%cl:create-program-with-binary (pointer context)
+                                                          1 dp lp bp
+                                                          (cffi:null-pointer)))))))))
 
 (defun %retain-program (program)
   (check-return (%cl:retain-program program))
