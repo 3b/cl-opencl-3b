@@ -290,7 +290,8 @@
 (defmethod release ((buffer host-buffer))
   (funcall (%release-thunk buffer) buffer)
   (when (event buffer)
-    (release (event buffer))))
+    (release (event buffer))
+    (setf (slot-value buffer 'event) nil)))
 
 (defparameter *lisp-type-map*
   (alexandria:plist-hash-table '(single-float :float
@@ -417,7 +418,7 @@
                         (make-instance 'event :pointer
                                        (mem-aref event-pointer
                                                  '%cl:event)))))
-          (make-instance 'read/map-buffer
+          (make-instance 'host-buffer
                          :event event
                          :data-pointer pointer
                          :state (if blockp :ready :waiting)
@@ -503,7 +504,90 @@
       ))
 )
 
+;;; 5.3.5 Mapping Image Objects
+(defun enqueue-map-image (command-queue image
+                          &key (blockp t) wait-list eventp
+                            (origin '(0 0 0))
+                            region
+                            (element-type 'single-float)
+                            read write)
+  (let* ((foreign-type (gethash element-type *lisp-type-map*))
+         rw-flags)
+    (when read (push :read rw-flags))
+    (when write (push :write rw-flags))
+    (unless region
+      (setf region (list (get-image-info image :width)
+                         (get-image-info image :height)
+                         (1+ (get-image-info image :depth)))))
+    (when (< (length region) 3)
+      (map-into (make-list 3 :initial-element 1) 'identity region))
+    (when (< (length origin) 3)
+      (map-into (make-list 3 :initial-element 0) 'identity origin))
+    (with-foreign-objects ((event-pointer '%cl:event)
+                           (%row-pitch '%cl:size-t)
+                           (%slice-pitch '%cl:size-t))
+      (with-counted-foreign-array (wait-count wait-pointer
+                                              '%cl:event
+                                              wait-list)
+        (with-foreign-arrays ((%region '%cl:size-t region)
+                              (%origin  '%cl:size-t origin))
+          #++(format t "map image ~s, ~s - ~s (~s,~s,~s)~%"
+                  image
+                  origin region
+                  (get-image-info image :width)
+                  (get-image-info image :height)
+                  (get-image-info image :depth))
+          (let* ((pointer (check-errcode-arg
+                           (%cl:enqueue-map-image (pointer command-queue)
+                                                  (pointer image)
+                                                  blockp
+                                                  rw-flags
+                                                  %origin
+                                                  %region
+                                                  %row-pitch
+                                                  %slice-pitch
+                                                  wait-count wait-pointer
+                                                  (if (or eventp (not blockp))
+                                                      event-pointer
+                                                      (cffi:null-pointer)))))
+                 (event (when (or eventp (not blockp))
+                          (make-instance 'event :pointer
+                                         (mem-aref event-pointer
+                                                   '%cl:event)))))
+            (values
+             (make-instance 'host-buffer
+                            :event event
+                            :data-pointer pointer
+                            :state (if blockp :ready :waiting)
+                            :release-thunk (%unmap-buffer-thunk command-queue
+                                                                event
+                                                                image
+                                                                pointer))
+             (mem-aref %row-pitch '%cl:size-t)
+             (mem-aref %slice-pitch '%cl:size-t))))))))
 
+(defmacro with-mapped-image ((p command-queue image row-pitch slice-pitch
+                              &key
+                                (element-type ''single-float)
+                                (origin ''(0 0 0))
+                                (region nil)
+                                read write) &body body)
+  "Maps the REGION texels of IMAGE of type ELEMENT-TYPE starting at
+ ORIGIN, storing the returned pointer in P. The buffer is unmapped
+ when execution leaves WITH-MAPPED-BUFFER. READ and/or WRITE should be
+ set to specify what access to the mapped data is desired."
+  (alexandria:once-only (command-queue image)
+    `(multiple-value-bind (,p ,row-pitch ,slice-pitch)
+         (enqueue-map-image ,command-queue ,image
+                            :region ,region
+                            :blockp t :origin ,origin
+                            :element-type ,element-type
+                            :read ,read :write ,write)
+       (unwind-protect
+            (progn
+              #++(format t "mapped buffer ~s ~s ~s~%" ,p ,row-pitch ,slice-pitch)
+              ,@body)
+         (enqueue-unmap-mem-object ,command-queue ,image ,p)))))
 
 ;;; 5.4.1 retaining and Releasing Memory Objects
 
@@ -519,8 +603,12 @@
 ;;; 5.4.2 Unmapping mapped memory objects
 (defun enqueue-unmap-mem-object (command-queue buffer pointer
                                  &key wait-list event)
-  (tg:cancel-finalization pointer)
-  (check-return+events (wait-list event)
+  (declare (ignorable command-queue buffer))
+  (when (or wait-list event)
+    (warn "no waitlist/events for enqueue-unmap-mem-object yet..."))
+  (release pointer)
+  #++(tg:cancel-finalization pointer)
+  #++(check-return+events (wait-list event)
    (%cl:enqueue-unmap-mem-object (pointer command-queue) (pointer buffer)
                                  (data-pointer pointer))))
 
