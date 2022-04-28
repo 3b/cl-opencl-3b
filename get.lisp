@@ -327,7 +327,8 @@ specified in a format similar to feature expressions:
   (:native-vector-width-long %cl:uint)
   (:native-vector-width-float %cl:uint)
   (:native-vector-width-double %cl:uint)
-  (:opencl-c-version :string))
+  (:opencl-c-version :string)
+  (:svm-capabilities :string))
 
 (define-info-getter get-context-info (context param) %cl:get-context-info
   (:reference-count %cl:uint)

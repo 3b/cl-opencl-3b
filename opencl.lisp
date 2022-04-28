@@ -14,6 +14,13 @@
              ,ret
              (error "OpenCL error ~s from ~s" ,error-code ',form))))))
 
+(defmacro check-non-null (form)
+  (let ((ret (gensym)))
+    `(let ((,ret ,form))
+       (if (not (null-pointer-p ,ret))
+           ,ret
+           (error "OpenCL error ~s returned null-pointer" ',form)))))
+
 (defmacro with-counted-foreign-array ((count-var pointer-var type sequence)
                                       &body body)
   (let ((i (gensym))
@@ -192,6 +199,21 @@
                                              0 (null-pointer) (null-pointer))))
     array))
 
+(defun enqueue-write-buffer (command-queue buffer array
+                            &key (blockp t) wait-list event
+                            (offset 0) (element-type 'single-float))
+  (let* ((foreign-type (gethash element-type *lisp-type-map*))
+         (octet-count (* (length array) (foreign-type-size foreign-type))))
+    (when (or event wait-list)
+      (error "events and wait lists not done yet in enqueue-write-buffer"))
+    (unless blockp
+      (error "non-blocking enqueue-write-buffer doesn't work yet"))
+    ;; w-p-t-v-d won't work with non-blocking read...
+    (with-pointer-to-vector-data (p array)
+      (check-return (%cl:enqueue-write-buffer command-queue buffer blockp
+                                             offset octet-count p
+                                             0 (null-pointer) (null-pointer))))))
+
 ;;; 5.2.3 Mapping Buffer Objects
 (defun enqueue-map-buffer (command-queue buffer count
                            &key (blockp t) wait-list event
@@ -227,6 +249,47 @@
        (unwind-protect
             (progn ,@body)
          (enqueue-unmap-mem-object ,command-queue ,buffer ,p)))))
+
+
+(defun enqueue-svm-map (command-queue buffer count
+                        &key (blockp t) wait-list event
+                          (element-type :float)
+                          read write)
+  (let* ((octet-count (* count (foreign-type-size element-type)))
+         rw-flags)
+    (when read (push :read rw-flags))
+    (when write (push :write rw-flags))
+    (when (or event wait-list)
+      (error "events and wait lists not done yet in enqueue-map-buffer"))
+    (unless blockp
+      (error "non-blocking enqueue-map-buffer doesn't work yet"))
+    (check-return
+        (%cl:enqueue-svm-map command-queue blockp rw-flags
+                             buffer octet-count
+                             0 (null-pointer) (null-pointer)))))
+
+(defun enqueue-svm-unmap (command-queue buffer
+                          &key wait-list event)
+  (when (or event wait-list)
+    (error "events and wait lists not done yet in enqueue-map-buffer"))
+  (check-return
+      (%cl:enqueue-svm-unmap command-queue buffer
+                             0 (null-pointer) (null-pointer))))
+
+(defmacro with-mapped-svm ((command-queue buffer count
+                            &key
+                              (element-type ''single-float)
+                              read write) &body body)
+  "Maps/Unmaps SVM buffer around body."
+  (alexandria:once-only (command-queue buffer)
+    `(progn
+       (enqueue-svm-map ,command-queue ,buffer ,count
+                        :blockp t
+                        :element-type ,element-type
+                        :read ,read :write ,write)
+       (unwind-protect
+            (progn ,@body)
+         (enqueue-svm-unmap ,command-queue ,buffer)))))
 
 ;;; 5.3.1 Creating Image Objects
 (defmacro with-image-format ((var channel-order channel-type) &body body)
@@ -303,6 +366,45 @@
 
 ;;; 5.4.4 Memory Object Queries - see get.lisp
 
+;;; 5.6  opencl 2.0 Shared Virtual Memory
+
+;;; 5.6.1 SVM sharing granularity
+
+(defun svm-alloc (context foreign-type size &rest flags)
+  (check-non-null (%cl:svm-alloc context flags (* (foreign-type-size foreign-type) size) 0)))
+
+(defun svm-free (context pointer)
+  (check-return (%cl:svm-free context pointer)))
+
+(defun enqueue-svm-free (command-queue pointer &key wait-list event)
+  (when (or event wait-list)
+    (error "events and wait lists not done yet in enqueue-svm-free"))
+  (check-return (%cl:enqueue-svm-free command-queue 1 pointer
+                                      (null-pointer) (null-pointer)
+                                      0 (null-pointer) (null-pointer))))
+
+
+
+(defun enqueue-svm-memcpy (command-queue dest src size
+                           &key (blockp t) wait-list event)
+  (when (or event wait-list)
+    (error "events and wait lists not done yet in enqueue-svm-free"))
+  (unless blockp
+    (error "non-blocking enqueue-svm-memcpy doesn't work yet"))
+  (check-return (%cl:enqueue-svm-memcpy command-queue blockp
+                                        dest src size
+                                        0 (null-pointer) (null-pointer))))
+
+#|
+(defun enqueue-svm-mem-fill (command-queue pointer pattern ...)
+  )
+|#
+
+
+
+
+
+
 
 ;;; 5.6.1 Creating Program Objects
 
@@ -321,6 +423,8 @@
                                                           (null-pointer)))))))
 
 ;; todo: create-program-with-binary
+
+
 
 (defun retain-program (program)
   (check-return (%cl:retain-program program))
@@ -396,6 +500,16 @@
   (with-foreign-object (p :pointer)
     (setf (mem-ref p :pointer) buffer)
     (check-return (%cl:set-kernel-arg kernel index (foreign-type-size '%cl:mem) p))))
+
+;; (defun %set-kernel-arg-svm-buffer (kernel index buffer)
+;;   (with-foreign-object (p :pointer)
+;;     (setf (mem-ref p :pointer) buffer)
+;;     (check-return (%cl:set-kernel-arg-svm-pointer kernel index p))))
+
+(defun %set-kernel-arg-svm-buffer (kernel index buffer)
+  (check-return (%cl:set-kernel-arg-svm-pointer kernel index buffer)))
+
+
 
 (defun %set-kernel-arg-image (kernel index image)
   (with-foreign-object (p :pointer)
@@ -507,5 +621,3 @@
 
 (defun create-from-gl-texture-2d (context usage texture-target miplevel texture)
   (check-errcode-arg (%cl:create-from-gl-texture-2d context usage texture-target miplevel texture)))
-
-

@@ -11,6 +11,16 @@
    #:create-buffer
    #:create-buffer-from-array
    #:create-command-queue
+
+   #:svm-alloc
+   #:svm-free
+   #:enqueue-svm-free
+   #:enqueue-svm-memcpy
+;;;   #:enqueue-svm-mem-fill
+   #:enqueue-svm-map
+   #:enqueue-svm-unmap
+   
+
    #:create-program-with-source
    #:release-program
    #:retain-program
@@ -24,6 +34,7 @@
    #:get-kernel-info
    #:get-kernel-work-group-info
    #:%set-kernel-arg-buffer
+   #:%set-kernel-arg-svm-buffer
    #:%set-kernel-arg-image
    #:%set-kernel-arg-number
    #:retain-mem-object
@@ -33,6 +44,7 @@
    #:flush
    #:finish
    #:enqueue-read-buffer
+   #:enqueue-write-buffer
    #:extension-present-p
    #:release-context
    #:release-command-queue
@@ -41,6 +53,7 @@
    #:create-context
    #:enqueue-map-buffer
    #:with-mapped-buffer
+   #:with-mapped-svm
    #:enqueue-unmap-mem-object
    #:create-from-gl-buffer
    #:enqueue-acquire-gl-objects

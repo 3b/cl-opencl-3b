@@ -89,6 +89,11 @@
   (arg-size size-t)
   (arg-value (:pointer :void)))
 
+(defclfun ("clSetKernelArgSVMPointer" set-kernel-arg-svm-pointer) error-code
+  (kernel kernel)
+  (arg-index uint)
+  (arg-value (:pointer :void)))
+
 (defclfun ("clEnqueueMarker" enqueue-marker) error-code
   (command-queue command-queue)
   (event (:pointer event)))
@@ -627,3 +632,79 @@
   (num-events-in-wait-list uint)
   (event-wait-list (:pointer event))
   (event (:pointer event)))
+
+;;; opencl 2.0
+
+;; SVM Allocation APIs
+
+(defclfun ("clSVMAlloc" svm-alloc) (:pointer :void)
+  (context context)
+  (flags svm-mem-flags)
+  (size size-t)
+  (alignment gl-uint))
+
+(defclfun ("clSVMFree" svm-free) error-code
+  (context context)
+  (svm-pointer (:pointer :void)))
+
+(defclfun ("clSetKernelArgSVMPointer" set-kernel-args-svm-pointer) error-code
+  (kernel kernel)
+  (arg-index gl-uint)
+  (arg-value :pointer))
+
+(defclfun ("clEnqueueSVMFree" enqueue-svm-free) error-code
+  (command-queue command-queue)
+  (num-svm-pointers gl-uint)
+  (svm-pointers[] (:pointer :void))
+  (pfn-free-func callback)
+  (user-data (:pointer :void))
+  (num-events-in-wait-list gl-uint)
+  (event-wait-list event)
+  (event event))
+
+(defclfun ("clEnqueueSVMMemcpy" enqueue-svm-memcpy) error-code
+  (command-queue command-queue)
+  (blocking-copy bool)
+  (dst-ptr (:pointer :void))
+  (src-ptr (:pointer :void))
+  (size size-t)
+  (num-events-in-wait-list gl-uint)
+  (event-wait-list event)
+  (event event))
+
+(defclfun ("clEnqueueSVMMemFill" enqueue-svm-mem-fill) error-code
+  (command-queue command-queue)
+  (svm-ptr (:pointer :void))
+  (pattern (:pointer :void))
+  (pattern-size size-t)
+  (size size-t)
+  (num-events-in-wait-list gl-uint)
+  (event-wait-list event)
+  (event event))
+
+(defclfun ("clEnqueueSVMMap" enqueue-svm-map) error-code
+  (command-queue command-queue)
+  (blocking-map bool)
+  (flags map-flags)
+  (svm-ptr (:pointer :void))
+  (size size-t)
+  (num-events-in-wait-list gl-uint)
+  (event-wait-list event)
+  (event event))
+
+(defclfun ("clEnqueueSVMUnmap" enqueue-svm-unmap) error-code
+  (command-queue command-queue)
+  (svm-ptr (:pointer :void))
+  (num-events-in-wait-list gl-uint)
+  (event-wait-list event)
+  (event event))
+
+(defclfun ("clEnqueueSVMMigrateMem" enqueue-svm-migrate-mem) error-code
+  (command-queue command-queue)
+  (num-svm-pointers gl-uint)
+  (svm-pointers[] (:pointer :void))
+  (sizes (:pointer size-t))
+  (flags mem-migration-flags)
+  (num-events-in-wait-list gl-uint)
+  (event-wait-list event)
+  (event event))

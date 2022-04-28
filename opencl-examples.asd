@@ -12,4 +12,5 @@
      (:file "opencl-glut")
      (:file "particle-gl")
      (:file "gl-texture")
+     (:file "svm-test")
      ))))
