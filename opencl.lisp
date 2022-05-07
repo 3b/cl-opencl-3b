@@ -214,7 +214,7 @@
                                              offset octet-count p
                                              0 (null-pointer) (null-pointer))))))
 
-(defun enqueue-read-svm-buffer (command-queue svm-buffer array
+(defun enqueue-read-svm-buffer (command-queue svm-buffer count
                                 &key (element-type 'single-float))
   (let* ((foreign-type (gethash element-type *lisp-type-map*))
          (octet-count (* count (foreign-type-size foreign-type)))
@@ -231,7 +231,7 @@
       do (setf (cffi:mem-aref p type i) x)))
 
 (defun enqueue-write-svm-buffer (command-queue svm-buffer array
-                                &key (element-type 'single-float))
+                                 &key (element-type 'single-float))
   (let* ((count (length array))
          (foreign-type (gethash element-type *lisp-type-map*))
          (octet-count (* count (foreign-type-size foreign-type))))
