@@ -12,6 +12,19 @@ __kernel void svm_test(__global float * out)
     out[tid] = (float) tid;
 }")
 
+(defmacro set-kernel-args (kernel args)
+  "Set args of kernel. If element of args is a list use
+%set-kernel-svm-buffer in case the second arg is :svm, else
+%set-kernel-number, else use %set-kernel-buffer."
+  `(progn ,@(loop
+               for i from 0
+               for arg in args
+               collect (if (consp arg)
+                           (if (eql (second arg) :svm)
+                               `(%set-kernel-arg-svm-buffer ,kernel ,i ,(first arg))    
+                               `,(append `(%set-kernel-arg-number ,kernel ,i) arg))
+                           `(%set-kernel-arg-buffer ,kernel ,i ,arg)))))
+
 (defun ensure-platform ()
   (or (car (get-platform-ids))
       (error "no openCL platform found")))
@@ -30,7 +43,6 @@ __kernel void svm_test(__global float * out)
       (format t "context = ~s~%" context)
       (let* ((buffer-size 32)
              (buffer (svm-alloc context :float buffer-size :write-only)) ;;; allocate a buffer in shared virtual memory
-
              (command-queue (create-command-queue context device))
              (program (create-program-with-source context *program-source*)))
         (format t "program = ~s~%" program)
@@ -54,10 +66,12 @@ __kernel void svm_test(__global float * out)
           (enqueue-svm-map command-queue buffer buffer-size :write t :read t)
           (loop for i below buffer-size do (setf (cffi:mem-aref buffer :float i) 1.0))
           (format t "~&buffer-contents before applying opencl kernel: ~a~%"
-                  (loop for i below buffer-size collect (cffi:mem-aref buffer :float i)))          (enqueue-svm-unmap command-queue buffer)
+                  (loop for i below buffer-size collect (cffi:mem-aref buffer :float i)))
+          (enqueue-svm-unmap command-queue buffer)
           (finish command-queue)
           ;;; change buffer values on gpu using opencl
-          (%set-kernel-arg-svm-buffer svm_test 0 buffer)
+;;;          (%set-kernel-arg-svm-buffer svm_test 0 buffer)
+          (set-kernel-args svm_test ((buffer :svm)))
           (enqueue-nd-range-kernel command-queue svm_test `(,buffer-size))
           (finish command-queue)
           ;;; read updated values from host ptr
@@ -69,6 +83,8 @@ __kernel void svm_test(__global float * out)
           (mapc 'release-kernel kernels))
         (release-program program)
         (svm-free context buffer)))))
+
+
 
 #++
 (svmtest)

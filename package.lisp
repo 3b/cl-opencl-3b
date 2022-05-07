@@ -44,6 +44,9 @@
    #:flush
    #:finish
    #:enqueue-read-buffer
+   #:enqueue-read-svm-buffer
+   #:enqueue-write-svm-buffer
+
    #:enqueue-write-buffer
    #:extension-present-p
    #:release-context
@@ -53,7 +56,7 @@
    #:create-context
    #:enqueue-map-buffer
    #:with-mapped-buffer
-   #:with-mapped-svm
+   #:with-mapped-svm-buffer
    #:enqueue-unmap-mem-object
    #:create-from-gl-buffer
    #:enqueue-acquire-gl-objects

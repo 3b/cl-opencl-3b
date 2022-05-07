@@ -214,6 +214,32 @@
                                              offset octet-count p
                                              0 (null-pointer) (null-pointer))))))
 
+(defun enqueue-read-svm-buffer (command-queue svm-buffer array
+                                &key (element-type 'single-float))
+  (let* ((foreign-type (gethash element-type *lisp-type-map*))
+         (octet-count (* count (foreign-type-size foreign-type)))
+         (array (make-array count :element-type element-type)))
+    (with-mapped-svm-buffer (command-queue svm-buffer octet-count :read t)
+      (dotimes (n count) (setf (aref array n) (mem-aref svm-buffer foreign-type n))))
+    array))
+
+(defun copy-vector (vector p &optional (type :float))
+  "copy the contents of vector to a foreign array at pointer p."
+    (loop
+      for x across vector
+      for i from 0
+      do (setf (cffi:mem-aref p type i) x)))
+
+(defun enqueue-write-svm-buffer (command-queue svm-buffer array
+                                &key (element-type 'single-float))
+  (let* ((count (length array))
+         (foreign-type (gethash element-type *lisp-type-map*))
+         (octet-count (* count (foreign-type-size foreign-type))))
+    (with-mapped-svm-buffer (command-queue svm-buffer octet-count :write t)
+      (dotimes (n count) (setf (mem-aref svm-buffer foreign-type n) (aref array n))))))
+
+
+
 ;;; 5.2.3 Mapping Buffer Objects
 (defun enqueue-map-buffer (command-queue buffer count
                            &key (blockp t) wait-list event
@@ -250,6 +276,22 @@
             (progn ,@body)
          (enqueue-unmap-mem-object ,command-queue ,buffer ,p)))))
 
+(defmacro with-mapped-svm-buffer ((command-queue buffer count
+                                   &key
+                                     (element-type :float) read write) &body body)
+  "Maps COUNT elements in an SVM BUFFER of type ELEMENT-TYPE. The
+   buffer is unmapped when execution leaves
+   WITH-MAPPED-SVM-BUFFER. READ and/or WRITE should be set to specify
+   what access to the mapped data is desired."
+  (alexandria:once-only (command-queue buffer)
+    `(progn
+       (enqueue-svm-map ,command-queue ,buffer ,count
+                        :element-type ,element-type
+                        :read ,read :write ,write)
+       (unwind-protect
+            (progn ,@body)
+         (enqueue-svm-unmap ,command-queue ,buffer)))))
+
 
 (defun enqueue-svm-map (command-queue buffer count
                         &key (blockp t) wait-list event
@@ -276,20 +318,20 @@
       (%cl:enqueue-svm-unmap command-queue buffer
                              0 (null-pointer) (null-pointer))))
 
-(defmacro with-mapped-svm ((command-queue buffer count
-                            &key
-                              (element-type ''single-float)
-                              read write) &body body)
-  "Maps/Unmaps SVM buffer around body."
-  (alexandria:once-only (command-queue buffer)
-    `(progn
-       (enqueue-svm-map ,command-queue ,buffer ,count
-                        :blockp t
-                        :element-type ,element-type
-                        :read ,read :write ,write)
-       (unwind-protect
-            (progn ,@body)
-         (enqueue-svm-unmap ,command-queue ,buffer)))))
+;; (defmacro with-mapped-svm ((command-queue buffer count
+;;                             &key
+;;                               (element-type ''single-float)
+;;                               read write) &body body)
+;;   "Maps/Unmaps SVM buffer around body."
+;;   (alexandria:once-only (command-queue buffer)
+;;     `(progn
+;;        (enqueue-svm-map ,command-queue ,buffer ,count
+;;                         :blockp t
+;;                         :element-type ,element-type
+;;                         :read ,read :write ,write)
+;;        (unwind-protect
+;;             (progn ,@body)
+;;          (enqueue-svm-unmap ,command-queue ,buffer)))))
 
 ;;; 5.3.1 Creating Image Objects
 (defmacro with-image-format ((var channel-order channel-type) &body body)
