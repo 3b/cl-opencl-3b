@@ -133,6 +133,7 @@
            :ENQUEUE-BARRIER
            :ENQUEUE-MARKER
            :SET-KERNEL-ARG
+           :SET-KERNEL-ARG-SVM-POINTER
            :SET-COMMAND-QUEUE-PROPERTY
            :COMMAND-QUEUE-PROPERTIES
            :UCHAR-16
@@ -201,7 +202,18 @@
            :set-event-callback
            :enqueue-write-buffer-rect
            :create-user-event
-
+           :svm-alloc
+           :svm-free
+           :set-kernel-args-svm-pointer
+           :enqueue-svm-free
+           :enqueue-svm-memcpy
+           :enqueue-svm-mem-fill
+           :enqueue-svm-map
+           :enqueue-svm-unmap
+           :enqueue-svm-migrate-mem
+           :svm-mem-flags
+           :mem-migration-flags
+           
 #:create-from-gl-buffer
 #:create-from-gl-texture-2d
 #:create-from-gl-texture-3d

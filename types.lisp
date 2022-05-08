@@ -37,6 +37,7 @@
 
 (cffi::defctype int int32-t)
 
+;;; (ctype cl-map-flags "cl_map_flags")
 
 ;;(cffi::defctype intptr-t :intptr)
 
@@ -166,16 +167,51 @@
   (:platform                          #x1031)
   ;;/* 0x1032 reserved for CL_DEVICE_DOUBLE_FP_CONFIG */
   ;;/* 0x1033 reserved for CL_DEVICE_HALF_FP_CONFIG */
-   (:PREFERRED-VECTOR-WIDTH-HALF       #x1034) ;;1.1
-   (:HOST-UNIFIED-MEMORY               #x1035) ;;1.1
-   (:NATIVE-VECTOR-WIDTH-CHAR          #x1036) ;;1.1
-   (:NATIVE-VECTOR-WIDTH-SHORT         #x1037) ;;1.1
-   (:NATIVE-VECTOR-WIDTH-INT           #x1038) ;;1.1
-   (:NATIVE-VECTOR-WIDTH-LONG          #x1039) ;;1.1
-   (:NATIVE-VECTOR-WIDTH-FLOAT         #x103A) ;;1.1
-   (:NATIVE-VECTOR-WIDTH-DOUBLE        #x103B) ;;1.1
-   (:NATIVE-VECTOR-WIDTH-HALF          #x103C) ;;1.1
-   (:OPENCL-C-VERSION                  #x103D)) ;;1.1
+  (:PREFERRED-VECTOR-WIDTH-HALF       #x1034) ;;1.1
+  (:HOST-UNIFIED-MEMORY               #x1035) ;;1.1
+  (:NATIVE-VECTOR-WIDTH-CHAR          #x1036) ;;1.1
+  (:NATIVE-VECTOR-WIDTH-SHORT         #x1037) ;;1.1
+  (:NATIVE-VECTOR-WIDTH-INT           #x1038) ;;1.1
+  (:NATIVE-VECTOR-WIDTH-LONG          #x1039) ;;1.1
+  (:NATIVE-VECTOR-WIDTH-FLOAT         #x103A) ;;1.1
+  (:NATIVE-VECTOR-WIDTH-DOUBLE        #x103B) ;;1.1
+  (:NATIVE-VECTOR-WIDTH-HALF          #x103C) ;;1.1
+  (:OPENCL-C-VERSION                  #x103D)
+;;; 1.2
+  (:LINKER-AVAILABLE                       #x103E)
+  (:BUILT-IN-KERNELS                       #x103F)
+  (:IMAGE-MAX-BUFFER-SIZE                  #x1040)
+  (:IMAGE-MAX-ARRAY-SIZE                   #x1041)
+  (:PARENT-DEVICE                          #x1042)
+  (:PARTITION-MAX-SUB-DEVICES              #x1043)
+  (:PARTITION-PROPERTIES                   #x1044)
+  (:PARTITION-AFFINITY-DOMAIN              #x1045)
+  (:PARTITION-TYPE                         #x1046)
+  (:REFERENCE-COUNT                        #x1047)
+  (:PREFERRED-INTEROP-USER-SYNC            #x1048)
+  (:PRINTF-BUFFER-SIZE                     #x1049)
+;;; 2.0
+  (:IMAGE-PITCH-ALIGNMENT                  #x104A)
+  (:IMAGE-BASE-ADDRESS-ALIGNMENT           #x104B)
+  (:MAX-READ-WRITE-IMAGE-ARGS              #x104C)
+  (:MAX-GLOBAL-VARIABLE-SIZE               #x104D)
+  (:QUEUE-ON-DEVICE-PROPERTIES             #x104E)
+  (:QUEUE-ON-DEVICE-PREFERRED-SIZE         #x104F)
+  (:QUEUE-ON-DEVICE-MAX-SIZE               #x1050)
+  (:MAX-ON-DEVICE-QUEUES                   #x1051)
+  (:MAX-ON-DEVICE-EVENTS                   #x1052)
+  (:SVM-CAPABILITIES                       #x1053)
+  (:GLOBAL-VARIABLE-PREFERRED-TOTAL-SIZE   #x1054)
+  (:MAX-PIPE-ARGS                          #x1055)
+  (:PIPE-MAX-ACTIVE-RESERVATIONS           #x1056)
+  (:PIPE-MAX-PACKET-SIZE                   #x1057)
+  (:PREFERRED-PLATFORM-ATOMIC-ALIGNMENT    #x1058)
+  (:PREFERRED-GLOBAL-ATOMIC-ALIGNMENT      #x1059)
+  (:PREFERRED-LOCAL-ATOMIC-ALIGNMENT       #x105A)
+;;; 2.1)
+  (:IL-VERSION                             #x105B)
+  (:MAX-NUM-SUB-GROUPS                     #x105C)
+  (:SUB-GROUP-INDEPENDENT-FORWARD-PROGRESS #x105D))
 
 (defbitfield (device-fp-config bitfield)
   (:DENORM                                #.(cl:ash 1 0))
@@ -233,7 +269,23 @@
   (:READ-ONLY                            #.(cl:ash 1 2))
   (:USE-HOST-PTR                         #.(cl:ash 1 3))
   (:ALLOC-HOST-PTR                       #.(cl:ash 1 4))
-  (:COPY-HOST-PTR                        #.(cl:ash 1 5)))
+  (:COPY-HOST-PTR                        #.(cl:ash 1 5))
+  (:HOST-WRITE-ONLY                      #.(cl:ash 1 6))
+  (:HOST-READ-ONLY                       #.(cl:ash 1 7))
+  (:HOST-NO-ACCESS                       #.(cl:ash 1 8))
+  (:KERNEL-READ-WRITE                    #.(cl:ash 1 9)))
+
+(defbitfield (mem-migration-flags bitfield)
+  (:MIGRATE-MEM-OBJECT-HOST              #.(cl:ash 1 0))
+  (:MIGRATE-MEM-OBJECT-CONTENT-UNDEFINED #.(cl:ash 1 1)))
+
+
+(defbitfield (svm-mem-flags bitfield)
+  (:READ-WRITE                           #.(cl:ash 1 0))
+  (:WRITE-ONLY                           #.(cl:ash 1 1))
+  (:READ-ONLY                            #.(cl:ash 1 2))
+  (:SVM-FINE-GRAIN-BUFFER                #.(cl:ash 1 3))
+  (:SVM-ATOMICS                          #.(cl:ash 1 4)))
 
 (defcenum (channel-order uint)
   (:R                                        #x10B0)
@@ -311,8 +363,9 @@
   (:FILTER-MODE                      #x1154))
 
 (defbitfield (map-flags bitfield)
-  (:READ                                 #.(cl:ash 1 0))
-  (:WRITE                                #.(cl:ash 1 1)))
+  (:READ                             #.(cl:ash 1 0))
+  (:WRITE                            #.(cl:ash 1 1))
+  (:WRITE-INVALIDATE-REGION          #.(cl:ash 1 2)))
 
 (defcenum (program-info uint)
   (:REFERENCE-COUNT                  #x1160)
@@ -442,6 +495,8 @@
   )
 
 (cffi::defctype event :pointer)
+
+(cffi::defctype callback :pointer)
 
 (cffi::defctype uint8-t :unsigned-char)
 
